@@ -8,6 +8,16 @@ export HERMES_HOME="${HERMES_HOME:-/data/hermes}"
 export HOME="${PAPERCLIP_HOME}"
 export HOST="0.0.0.0"
 
+# Hermes binary is provided via the hermes-agent-src volume
+export PATH="/opt/hermes/.local/bin:${PATH}"
+
+# Wait for the hermes-agent-src volume to be populated by the hermes-agent container
+echo "[entrypoint] waiting for hermes binary at /opt/hermes/.local/bin/hermes..."
+until [ -x "/opt/hermes/.local/bin/hermes" ]; do
+  sleep 1
+done
+echo "[entrypoint] hermes binary ready"
+
 mkdir -p "${PAPERCLIP_HOME}" "${HERMES_HOME}"
 chown -R node:node "${PAPERCLIP_HOME}" "${HERMES_HOME}"
 
@@ -23,10 +33,6 @@ if [ ! -d "${PAPERCLIP_HOME}/instances" ]; then
   echo "[entrypoint] first boot — running paperclipai onboard --yes"
   HOME="${PAPERCLIP_HOME}" paperclipai onboard --yes || echo "[entrypoint] WARNING: onboard exited non-zero"
 fi
-
-# Start Hermes gateway in background so hermes-webui and hermes-dashboard can connect
-echo "[entrypoint] starting hermes gateway on :8642"
-HERMES_HOME="${HERMES_HOME}" HOME="${HERMES_HOME}" hermes gateway run &
 
 # Register allowed hostname if IP_ADDRESS is set
 if [ -n "${IP_ADDRESS:-}" ]; then

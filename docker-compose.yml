@@ -1,4 +1,26 @@
 services:
+  hermes-agent:
+    image: nousresearch/hermes-agent:latest
+    command: gateway run
+    ports:
+      - "127.0.0.1:8642:8642"
+    volumes:
+      - hermes-agent-src:/opt/hermes
+      - hermes-data:/home/hermes/.hermes
+    environment:
+      - HERMES_HOME=/home/hermes/.hermes
+      - API_SERVER_ENABLED=true
+      - API_SERVER_HOST=0.0.0.0
+      - API_SERVER_KEY=${API_SERVER_KEY}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+    networks:
+      - hermes-net
+
   paperclip-hermes:
     build:
       context: .
@@ -6,17 +28,15 @@ services:
         USER_UID: ${USER_UID:-1000}
         USER_GID: ${USER_GID:-1000}
     image: paperclip-hermes
+    depends_on:
+      - hermes-agent
     ports:
       - "3100:3100"
-      - "127.0.0.1:8642:8642"
     volumes:
       - paperclip-data:/paperclip
       - hermes-data:/data/hermes
+      - hermes-agent-src:/opt/hermes
     env_file: .env
-    environment:
-      - API_SERVER_ENABLED=true
-      - API_SERVER_HOST=0.0.0.0
-      - API_SERVER_KEY=${API_SERVER_KEY}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3100').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -36,7 +56,7 @@ services:
     image: nousresearch/hermes-agent:latest
     command: dashboard --host 0.0.0.0 --insecure
     depends_on:
-      - paperclip-hermes
+      - hermes-agent
     ports:
       - "127.0.0.1:9119:9119"
     volumes:
@@ -45,7 +65,7 @@ services:
       - HERMES_HOME=/home/hermes/.hermes
       - HERMES_UID=${USER_UID:-1000}
       - HERMES_GID=${USER_GID:-1000}
-      - GATEWAY_HEALTH_URL=http://paperclip-hermes:8642
+      - GATEWAY_HEALTH_URL=http://hermes-agent:8642
     restart: unless-stopped
     deploy:
       resources:
@@ -58,7 +78,7 @@ services:
   hermes-webui:
     image: ghcr.io/nesquena/hermes-webui:latest
     depends_on:
-      - paperclip-hermes
+      - hermes-agent
     ports:
       - "127.0.0.1:8787:8787"
     volumes:
@@ -86,3 +106,4 @@ networks:
 volumes:
   paperclip-data:
   hermes-data:
+  hermes-agent-src:

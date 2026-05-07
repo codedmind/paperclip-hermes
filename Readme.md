@@ -1,23 +1,32 @@
 # paperclip-hermes
 
-Docker image that bundles [Paperclip AI](https://github.com/MinuteCode/paperclip) with [Hermes Agent](https://github.com/NousResearch/hermes-agent).
+Docker image that runs [Paperclip AI](https://github.com/MinuteCode/paperclip) with [Hermes Agent](https://github.com/NousResearch/hermes-agent) available as a CLI tool.
 
-Runs Paperclip and Hermes in a single container, with [Hermes Dashboard](https://github.com/NousResearch/hermes-agent) and [Hermes WebUI](https://github.com/nesquena/hermes-webui) as companion services via Docker Compose.
+Paperclip integrates with Hermes via CLI. The Hermes binary is provided by the official `nousresearch/hermes-agent` image through a shared Docker volume — no need to bake it into the Paperclip image. [Hermes Dashboard](https://github.com/NousResearch/hermes-agent) and [Hermes WebUI](https://github.com/nesquena/hermes-webui) run as companion services.
 
-## Features
+## Architecture
 
-- Paperclip AI installed globally
-- Hermes Agent installed under `/opt/hermes`
-- Hermes gateway running on port `8642` (for WebUI and Dashboard)
-- Persistent Paperclip data under `/paperclip`
-- Persistent Hermes config under `/data/hermes`
+```
+hermes-agent  (nousresearch/hermes-agent:latest)
+  ├── gateway run → :8642
+  ├── /opt/hermes       → hermes-agent-src volume (binary)
+  └── /home/hermes/.hermes → hermes-data volume (config/state)
+
+paperclip-hermes  (build local)
+  ├── /opt/hermes       ← hermes-agent-src volume (CLI access)
+  ├── /data/hermes      ← hermes-data volume (shared config)
+  └── /paperclip        ← paperclip-data volume
+
+hermes-dashboard  (nousresearch/hermes-agent:latest) → :9119
+hermes-webui      (ghcr.io/nesquena/hermes-webui)   → :8787
+```
 
 ## Services
 
 | Service | Port | Description |
 |---|---|---|
 | Paperclip | `3100` | Main Paperclip UI |
-| Hermes Gateway | `8642` | Internal — used by Dashboard and WebUI |
+| Hermes Gateway | `8642` | API server for Dashboard and WebUI |
 | Hermes Dashboard | `9119` | Hermes agent dashboard |
 | Hermes WebUI | `8787` | Hermes chat interface |
 
@@ -25,7 +34,7 @@ Runs Paperclip and Hermes in a single container, with [Hermes Dashboard](https:/
 
 ```bash
 cp .env.sample .env
-# Edit .env — set ANTHROPIC_API_KEY if you want to use Hermes
+# Edit .env — set API_SERVER_KEY and ANTHROPIC_API_KEY
 docker compose up -d
 ```
 
@@ -52,8 +61,8 @@ docker build -t paperclip-hermes .
 | `PAPERCLIP_INSTANCE_ID` | `default` | Paperclip instance name |
 | `PAPERCLIP_DEPLOYMENT_MODE` | `authenticated` | Paperclip deployment mode |
 | `PAPERCLIP_DEPLOYMENT_EXPOSURE` | `private` | Paperclip exposure setting |
-| `ANTHROPIC_API_KEY` | unset | Needed to use Hermes (not required to start) |
 | `API_SERVER_KEY` | unset | Gateway API key — required for gateway mode (min 8 chars) |
+| `ANTHROPIC_API_KEY` | unset | Needed to use Hermes (not required to start) |
 | `IP_ADDRESS` | unset | Optional hostname/IP to register with Paperclip |
 | `HERMES_MODEL` | unset | Optional Hermes model override |
 | `HERMES_INFERENCE_PROVIDER` | unset | Optional Hermes provider override |
@@ -61,16 +70,19 @@ docker build -t paperclip-hermes .
 
 ## Persistent data
 
-| Path | Description |
+| Volume | Description |
 |---|---|
-| `/paperclip` | Paperclip data (shared with Dashboard and WebUI) |
-| `/data/hermes` | Hermes config and state |
+| `paperclip-data` | Paperclip state and instances |
+| `hermes-data` | Hermes config, sessions, and state (shared across all services) |
+| `hermes-agent-src` | Hermes binary — populated by hermes-agent, mounted read-only by Paperclip |
 
-Use Docker named volumes (default in `docker-compose.yml`) or bind mounts to persist data across restarts.
+Use Docker named volumes (default) or bind mounts to persist data across restarts.
 
 ## Hermes configuration
 
-On first boot, the image seeds a minimal Hermes config into `$HERMES_HOME/config.yaml` to prevent the interactive setup wizard from running. You can override it by mounting your own config:
+On first boot, `start.sh` seeds a minimal Hermes config into `$HERMES_HOME/config.yaml` if one doesn't already exist. This prevents the interactive setup wizard from running when Paperclip calls the Hermes CLI.
+
+You can override it by mounting your own config:
 
 ```bash
 docker run --rm -it \
@@ -85,7 +97,6 @@ docker run --rm -it \
 To run multiple independent Hermes instances, use separate containers with distinct volumes:
 
 ```bash
-# Second profile — copy compose and point to different volumes
 docker run -d \
   --name hermes-work \
   -v hermes-data-work:/data/hermes \
@@ -106,11 +117,9 @@ docker run --rm -it --entrypoint bash paperclip-hermes:dev
 
 ## Security notes
 
-This image downloads Hermes Agent during build time. For reproducible builds, pin the Hermes Agent reference to a specific tag or commit.
-
 Recommended hardening:
 
 - Pin the base image by digest
 - Pin the `paperclipai` npm version
-- Avoid `curl | bash` from a moving branch
+- Pin `nousresearch/hermes-agent` to a specific tag or digest
 - Add CI checks for Docker builds and shell scripts
