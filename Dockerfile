@@ -11,6 +11,7 @@ ENV PAPERCLIP_INSTANCE_ID=default
 ENV PAPERCLIP_DEPLOYMENT_MODE=authenticated
 ENV PAPERCLIP_DEPLOYMENT_EXPOSURE=private
 
+# System deps — cached unless base image changes
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     git \
@@ -18,6 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ripgrep \
     && rm -rf /var/lib/apt/lists/* \
     && corepack enable
+
+# Install Paperclip before usermod so USER_UID/GID changes don't bust this cache layer
+RUN npm install -g paperclipai
 
 # Align node user UID/GID with host to avoid permission issues on bind mounts
 RUN usermod -u $USER_UID --non-unique node \
@@ -28,9 +32,6 @@ RUN usermod -u $USER_UID --non-unique node \
 # Copied to $HERMES_HOME at runtime by start.sh if not already present.
 COPY hermes-config.yaml /etc/hermes/config.yaml
 RUN touch /etc/hermes/.env
-
-# Install Paperclip (goes to /usr/local/bin, accessible by all users)
-RUN npm install -g paperclipai
 
 RUN mkdir -p /paperclip /workspace \
     && chown -R node:node /paperclip /workspace
