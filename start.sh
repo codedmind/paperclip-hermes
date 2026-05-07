@@ -9,11 +9,11 @@ export HOME="${PAPERCLIP_HOME}"
 export HOST="0.0.0.0"
 
 # Hermes binary is provided via the hermes-agent-src volume
-export PATH="/opt/hermes/.local/bin:${PATH}"
+export PATH="/opt/hermes:${PATH}"
 
 # Wait for the hermes-agent-src volume to be populated by the hermes-agent container
-echo "[entrypoint] waiting for hermes binary at /opt/hermes/.local/bin/hermes..."
-until [ -x "/opt/hermes/.local/bin/hermes" ]; do
+echo "[entrypoint] waiting for hermes binary at /opt/hermes/hermes..."
+until [ -x "/opt/hermes/hermes" ]; do
   sleep 1
 done
 echo "[entrypoint] hermes binary ready"
