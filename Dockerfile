@@ -1,8 +1,5 @@
 FROM node:lts-trixie-slim
 
-ARG USER_UID=1000
-ARG USER_GID=1000
-
 ENV DEBIAN_FRONTEND=noninteractive
 ENV NODE_ENV=production
 ENV PAPERCLIP_HOME=/paperclip
@@ -20,13 +17,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && corepack enable
 
-# Install Paperclip before usermod so USER_UID/GID changes don't bust this cache layer
+# Install Paperclip (goes to /usr/local/bin, accessible by all users)
 RUN npm install -g paperclipai
-
-# Align node user UID/GID with host to avoid permission issues on bind mounts
-RUN usermod -u $USER_UID --non-unique node \
-    && groupmod -g $USER_GID --non-unique node \
-    && usermod -g $USER_GID -d /paperclip node
 
 # Pre-seed minimal Hermes config so it never triggers the interactive setup wizard.
 # Copied to $HERMES_HOME at runtime by start.sh if not already present.

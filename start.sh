@@ -8,6 +8,26 @@ export HERMES_HOME="${HERMES_HOME:-/data/hermes}"
 export HOME="${PAPERCLIP_HOME}"
 export HOST="0.0.0.0"
 
+# Remap node UID/GID to match host user at runtime — avoids volume permission issues
+# Pattern from official Paperclip docker-entrypoint.sh
+PUID="${USER_UID:-1000}"
+PGID="${USER_GID:-1000}"
+_changed=0
+if [ "$(id -u node)" -ne "$PUID" ]; then
+  echo "[entrypoint] updating node UID to $PUID"
+  usermod -o -u "$PUID" node
+  _changed=1
+fi
+if [ "$(id -g node)" -ne "$PGID" ]; then
+  echo "[entrypoint] updating node GID to $PGID"
+  groupmod -o -g "$PGID" node
+  usermod -g "$PGID" node
+  _changed=1
+fi
+if [ "$_changed" = "1" ]; then
+  chown -R node:node "${PAPERCLIP_HOME}"
+fi
+
 # Hermes binary is provided via the hermes-agent-src volume
 export PATH="/opt/hermes:${PATH}"
 
@@ -18,12 +38,10 @@ until [ -x "/opt/hermes/hermes" ]; do
 done
 echo "[entrypoint] hermes binary ready"
 
-mkdir -p "${PAPERCLIP_HOME}"
-chown -R node:node "${PAPERCLIP_HOME}"
-
 # Seed Hermes config if not already present
 if [ ! -f "${HERMES_HOME}/config.yaml" ]; then
   echo "[entrypoint] seeding default hermes config"
+  mkdir -p "${HERMES_HOME}"
   cp /etc/hermes/config.yaml "${HERMES_HOME}/config.yaml"
   cp /etc/hermes/.env        "${HERMES_HOME}/.env"
 fi
