@@ -8,7 +8,7 @@ This image is intended to run Paperclip with Hermes available inside the same co
 
 - Paperclip AI installed globally
 - Hermes Agent installed under `/opt/hermes`
-- Persistent Paperclip data under `/data/paperclip`
+- Persistent Paperclip data under `/paperclip`
 - Persistent Hermes config under `/data/hermes`
 - Exposes Paperclip on port `3100`
 
@@ -25,7 +25,7 @@ docker build -t paperclip-hermes .
 ```bash
 docker run --rm -it \
   -p 3100:3100 \
-  -v paperclip-data:/data/paperclip \
+  -v paperclip-data:/paperclip \
   -v hermes-data:/data/hermes \
   paperclip-hermes
 ```
@@ -51,7 +51,7 @@ http://localhost:3100
 The container uses two persistent directories:
 
 ```text
-/data/paperclip
+/paperclip
 /data/hermes
 ```
 
@@ -73,7 +73,7 @@ Example:
 docker run --rm -it \
   -p 3100:3100 \
   -v ./hermes-config.yaml:/data/hermes/config.yaml \
-  -v paperclip-data:/data/paperclip \
+  -v paperclip-data:/paperclip \
   paperclip-hermes
 ```
 

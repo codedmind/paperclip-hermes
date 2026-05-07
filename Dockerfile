@@ -1,18 +1,32 @@
-FROM node:20-bookworm-slim
+FROM node:lts-trixie-slim
+
+ARG USER_UID=1000
+ARG USER_GID=1000
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PAPERCLIP_HOME=/data/paperclip
+ENV NODE_ENV=production
+ENV PAPERCLIP_HOME=/paperclip
 ENV HERMES_HOME=/data/hermes
+ENV PAPERCLIP_INSTANCE_ID=default
+ENV PAPERCLIP_DEPLOYMENT_MODE=authenticated
+ENV PAPERCLIP_DEPLOYMENT_EXPOSURE=private
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     build-essential \
     ca-certificates \
     curl \
     git \
+    gosu \
     python3 \
-    python3-pip \
-    && rm -rf /var/lib/apt/lists/*
+    ripgrep \
+    && rm -rf /var/lib/apt/lists/* \
+    && corepack enable
+
+# Align node user UID/GID with host to avoid permission issues on bind mounts
+RUN usermod -u $USER_UID --non-unique node \
+    && groupmod -g $USER_GID --non-unique node \
+    && usermod -g $USER_GID -d /paperclip node
 
 # Install Hermes to /opt/hermes (not /root) so the node user can access it.
 # HOME must be exported so the piped bash subprocess inherits it.
@@ -31,8 +45,10 @@ RUN touch /etc/hermes/.env
 # Install Paperclip (goes to /usr/local/bin, accessible by all users)
 RUN npm install -g paperclipai
 
-RUN mkdir -p /data/paperclip /data/hermes /workspace \
-    && chown -R node:node /data/paperclip /data/hermes /workspace
+RUN mkdir -p /paperclip /data/hermes /workspace \
+    && chown -R node:node /paperclip /data/hermes /workspace
+
+VOLUME ["/paperclip"]
 
 WORKDIR /workspace
 

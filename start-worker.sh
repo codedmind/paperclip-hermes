@@ -3,8 +3,8 @@ set -euo pipefail
 
 echo "[worker] pid=$$ running as $(id)"
 
-export HOME="${PAPERCLIP_HOME:-/data/paperclip}"
-export PAPERCLIP_HOME="${PAPERCLIP_HOME:-/data/paperclip}"
+export HOME="${PAPERCLIP_HOME:-/paperclip}"
+export PAPERCLIP_HOME="${PAPERCLIP_HOME:-/paperclip}"
 export HERMES_HOME="${HERMES_HOME:-/data/hermes}"
 export HOST="0.0.0.0"
 
