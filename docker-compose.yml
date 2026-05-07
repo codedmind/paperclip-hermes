@@ -9,8 +9,6 @@ services:
       - hermes-data:/home/hermes/.hermes
     environment:
       - HERMES_HOME=/home/hermes/.hermes
-      - HERMES_UID=${USER_UID:-1000}
-      - HERMES_GID=${USER_GID:-1000}
       - API_SERVER_ENABLED=true
       - API_SERVER_HOST=0.0.0.0
       - API_SERVER_KEY=${API_SERVER_KEY}
@@ -36,7 +34,7 @@ services:
       - "3100:3100"
     volumes:
       - paperclip-data:/paperclip
-      - hermes-data:/data/hermes
+      - hermes-cli-data:/data/hermes
       - hermes-agent-src:/opt/hermes
     env_file: .env
     restart: unless-stopped
@@ -65,8 +63,6 @@ services:
       - hermes-data:/home/hermes/.hermes
     environment:
       - HERMES_HOME=/home/hermes/.hermes
-      - HERMES_UID=${USER_UID:-1000}
-      - HERMES_GID=${USER_GID:-1000}
       - GATEWAY_HEALTH_URL=http://hermes-agent:8642
     restart: unless-stopped
     deploy:
@@ -108,4 +104,5 @@ networks:
 volumes:
   paperclip-data:
   hermes-data:
+  hermes-cli-data:
   hermes-agent-src:
