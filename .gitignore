@@ -1,0 +1,11 @@
+# Environment
+.env
+*.env.local
+
+# Docker volumes / runtime data
+paperclip-data/
+hermes-data/
+
+# OS
+.DS_Store
+Thumbs.db
