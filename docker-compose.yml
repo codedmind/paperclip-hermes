@@ -1,0 +1,25 @@
+services:
+  paperclip-hermes:
+    build:
+      context: .
+      args:
+        USER_UID: ${USER_UID:-1000}
+        USER_GID: ${USER_GID:-1000}
+    image: paperclip-hermes
+    ports:
+      - "3100:3100"
+    volumes:
+      - paperclip-data:/paperclip
+      - hermes-data:/data/hermes
+    env_file: .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3100').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+volumes:
+  paperclip-data:
+  hermes-data:
