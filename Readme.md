@@ -35,7 +35,7 @@ hermes-webui      (ghcr.io/nesquena/hermes-webui)   → :8787
 ```bash
 cp .env.sample .env
 # Edit .env — set API_SERVER_KEY and ANTHROPIC_API_KEY
-docker compose up -d
+docker compose up -d --build
 ```
 
 Then open:
