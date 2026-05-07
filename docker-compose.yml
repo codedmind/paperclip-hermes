@@ -85,6 +85,7 @@ services:
       - "127.0.0.1:8787:8787"
     volumes:
       - hermes-data:/home/hermeswebui/.hermes
+      - hermes-agent-src:/home/hermeswebui/.hermes/hermes-agent
       - ${HERMES_WORKSPACE:-~/workspace}:/workspace
     environment:
       - HERMES_WEBUI_HOST=0.0.0.0
