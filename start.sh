@@ -18,8 +18,8 @@ until [ -x "/opt/hermes/.local/bin/hermes" ]; do
 done
 echo "[entrypoint] hermes binary ready"
 
-mkdir -p "${PAPERCLIP_HOME}" "${HERMES_HOME}"
-chown -R node:node "${PAPERCLIP_HOME}" "${HERMES_HOME}"
+mkdir -p "${PAPERCLIP_HOME}"
+chown -R node:node "${PAPERCLIP_HOME}"
 
 # Seed Hermes config if not already present
 if [ ! -f "${HERMES_HOME}/config.yaml" ]; then
