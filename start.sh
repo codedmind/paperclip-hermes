@@ -24,6 +24,10 @@ if [ ! -d "${PAPERCLIP_HOME}/instances" ]; then
   HOME="${PAPERCLIP_HOME}" paperclipai onboard --yes || echo "[entrypoint] WARNING: onboard exited non-zero"
 fi
 
+# Start Hermes gateway in background so hermes-webui and hermes-dashboard can connect
+echo "[entrypoint] starting hermes gateway on :8642"
+HERMES_HOME="${HERMES_HOME}" HOME="${HERMES_HOME}" hermes gateway run &
+
 # Register allowed hostname if IP_ADDRESS is set
 if [ -n "${IP_ADDRESS:-}" ]; then
   echo "[entrypoint] registering allowed-hostname ${IP_ADDRESS}"

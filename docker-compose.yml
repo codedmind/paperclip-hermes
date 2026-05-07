@@ -8,6 +8,7 @@ services:
     image: paperclip-hermes
     ports:
       - "3100:3100"
+      - "127.0.0.1:8642:8642"
     volumes:
       - paperclip-data:/paperclip
       - hermes-data:/data/hermes
@@ -19,6 +20,49 @@ services:
       timeout: 5s
       start_period: 20s
       retries: 3
+    networks:
+      - hermes-net
+
+  hermes-dashboard:
+    image: nousresearch/hermes-agent:latest
+    command: dashboard --host 0.0.0.0 --insecure
+    depends_on:
+      - paperclip-hermes
+    ports:
+      - "127.0.0.1:9119:9119"
+    volumes:
+      - hermes-data:/home/hermes/.hermes
+    environment:
+      - HERMES_HOME=/home/hermes/.hermes
+      - HERMES_UID=${USER_UID:-1000}
+      - HERMES_GID=${USER_GID:-1000}
+      - GATEWAY_HEALTH_URL=http://paperclip-hermes:8642
+    restart: unless-stopped
+    networks:
+      - hermes-net
+
+  hermes-webui:
+    image: ghcr.io/nesquena/hermes-webui:latest
+    depends_on:
+      - paperclip-hermes
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - hermes-data:/home/hermeswebui/.hermes
+      - ${HERMES_WORKSPACE:-~/workspace}:/workspace
+    environment:
+      - HERMES_WEBUI_HOST=0.0.0.0
+      - HERMES_WEBUI_PORT=8787
+      - HERMES_WEBUI_STATE_DIR=/home/hermeswebui/.hermes/webui
+      - WANTED_UID=${USER_UID:-1000}
+      - WANTED_GID=${USER_GID:-1000}
+    restart: unless-stopped
+    networks:
+      - hermes-net
+
+networks:
+  hermes-net:
+    driver: bridge
 
 volumes:
   paperclip-data:
