@@ -44,4 +44,4 @@ if [ -n "${IP_ADDRESS:-}" ]; then
 fi
 
 echo "[entrypoint] starting paperclipai as node"
-exec gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" HERMES_HOME="${HERMES_HOME}" HOST=0.0.0.0 paperclipai run
+exec gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" HERMES_HOME="${HERMES_HOME}" HOST=0.0.0.0 paperclipai run --bind lan
