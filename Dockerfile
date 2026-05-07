@@ -12,8 +12,6 @@ ENV PAPERCLIP_DEPLOYMENT_MODE=authenticated
 ENV PAPERCLIP_DEPLOYMENT_EXPOSURE=private
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash \
-    build-essential \
     ca-certificates \
     git \
     gosu \
