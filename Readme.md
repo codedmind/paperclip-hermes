@@ -53,6 +53,7 @@ docker build -t paperclip-hermes .
 | `PAPERCLIP_DEPLOYMENT_MODE` | `authenticated` | Paperclip deployment mode |
 | `PAPERCLIP_DEPLOYMENT_EXPOSURE` | `private` | Paperclip exposure setting |
 | `ANTHROPIC_API_KEY` | unset | Needed to use Hermes (not required to start) |
+| `API_SERVER_KEY` | unset | Gateway API key — required for gateway mode (min 8 chars) |
 | `IP_ADDRESS` | unset | Optional hostname/IP to register with Paperclip |
 | `HERMES_MODEL` | unset | Optional Hermes model override |
 | `HERMES_INFERENCE_PROVIDER` | unset | Optional Hermes provider override |
@@ -78,6 +79,21 @@ docker run --rm -it \
   -v paperclip-data:/paperclip \
   paperclip-hermes
 ```
+
+## Multi-profile
+
+To run multiple independent Hermes instances, use separate containers with distinct volumes:
+
+```bash
+# Second profile — copy compose and point to different volumes
+docker run -d \
+  --name hermes-work \
+  -v hermes-data-work:/data/hermes \
+  -p 127.0.0.1:8643:8642 \
+  paperclip-hermes
+```
+
+Each profile gets its own data directory, sessions, memories, and config. Do not share the same `hermes-data` volume between two running containers — concurrent writes are not supported.
 
 ## Development
 
