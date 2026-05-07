@@ -34,10 +34,13 @@ if [ ! -d "${PAPERCLIP_HOME}/instances" ]; then
   HOME="${PAPERCLIP_HOME}" paperclipai onboard --yes || echo "[entrypoint] WARNING: onboard exited non-zero"
 fi
 
-# Register allowed hostname if IP_ADDRESS is set
+# Always allow localhost (required for Docker port-mapped access)
+HOME="${PAPERCLIP_HOME}" paperclipai allowed-hostname localhost || true
+
+# Register additional hostname if IP_ADDRESS is set
 if [ -n "${IP_ADDRESS:-}" ]; then
   echo "[entrypoint] registering allowed-hostname ${IP_ADDRESS}"
-  HOME="${PAPERCLIP_HOME}" paperclipai allowed-hostname "${IP_ADDRESS}" || echo "[entrypoint] WARNING: allowed-hostname failed (will retry after start)"
+  HOME="${PAPERCLIP_HOME}" paperclipai allowed-hostname "${IP_ADDRESS}" || echo "[entrypoint] WARNING: allowed-hostname failed"
 fi
 
 echo "[entrypoint] starting paperclipai as node"
