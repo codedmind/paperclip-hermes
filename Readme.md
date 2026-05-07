@@ -97,6 +97,14 @@ docker run --rm -it \
 To run multiple independent Hermes instances, use separate containers with distinct volumes:
 
 ```bash
+# Work profile
+docker run -d \
+  --name hermes-work \
+  -v hermes-data-work:/data/hermes \
+  -p 127.0.0.1:8643:8642 \
+  paperclip-hermes
+
+# Personal profile
 docker run -d \
   --name hermes-work \
   -v hermes-data-work:/data/hermes \
