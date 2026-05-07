@@ -25,7 +25,7 @@ Runs Paperclip and Hermes in a single container, with [Hermes Dashboard](https:/
 
 ```bash
 cp .env.sample .env
-# Edit .env — set ANTHROPIC_API_KEY at minimum
+# Edit .env — set ANTHROPIC_API_KEY if you want to use Hermes
 docker compose up -d
 ```
 
@@ -52,7 +52,7 @@ docker build -t paperclip-hermes .
 | `PAPERCLIP_INSTANCE_ID` | `default` | Paperclip instance name |
 | `PAPERCLIP_DEPLOYMENT_MODE` | `authenticated` | Paperclip deployment mode |
 | `PAPERCLIP_DEPLOYMENT_EXPOSURE` | `private` | Paperclip exposure setting |
-| `ANTHROPIC_API_KEY` | unset | Required for Hermes to function |
+| `ANTHROPIC_API_KEY` | unset | Needed to use Hermes (not required to start) |
 | `IP_ADDRESS` | unset | Optional hostname/IP to register with Paperclip |
 | `HERMES_MODEL` | unset | Optional Hermes model override |
 | `HERMES_INFERENCE_PROVIDER` | unset | Optional Hermes provider override |
