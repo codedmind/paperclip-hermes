@@ -88,6 +88,7 @@ services:
       - HERMES_WEBUI_HOST=0.0.0.0
       - HERMES_WEBUI_PORT=8787
       - HERMES_WEBUI_STATE_DIR=/home/hermeswebui/.hermes/webui
+      - HERMES_WEBUI_PASSWORD=${HERMES_WEBUI_PASSWORD}
       - WANTED_UID=${USER_UID:-1000}
       - WANTED_GID=${USER_GID:-1000}
     restart: unless-stopped
