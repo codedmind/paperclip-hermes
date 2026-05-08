@@ -54,10 +54,11 @@ if [ ! -f "${HERMES_HOME}/config.yaml" ]; then
   chown -R node:node "${HERMES_HOME}"
 fi
 
-# Non-interactive onboard on first boot
+# Non-interactive onboard on first boot — --bind lan sets authenticated/private mode with LAN binding
+# --yes alone forces local_trusted/loopback and ignores all env vars (upstream behaviour)
 if [ ! -d "${PAPERCLIP_HOME}/instances" ]; then
-  echo "[entrypoint] first boot — running paperclipai onboard --yes"
-  gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" paperclipai onboard --yes || echo "[entrypoint] WARNING: onboard exited non-zero"
+  echo "[entrypoint] first boot — running paperclipai onboard --yes --bind lan"
+  gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" paperclipai onboard --yes --bind lan || echo "[entrypoint] WARNING: onboard exited non-zero"
 fi
 
 # Always allow localhost (required for Docker port-mapped access)
