@@ -47,14 +47,19 @@ until [ -x "/opt/hermes/hermes" ]; do
 done
 echo "[entrypoint] hermes binary ready"
 
-# Seed Hermes config if not already present
-if [ ! -f "${HERMES_HOME}/config.yaml" ]; then
-  echo "[entrypoint] seeding default hermes config"
-  mkdir -p "${HERMES_HOME}"
-  cp /etc/hermes/config.yaml "${HERMES_HOME}/config.yaml"
-  cp /etc/hermes/.env        "${HERMES_HOME}/.env"
-  chown -R node:node "${HERMES_HOME}"
-fi
+# Create wrapper so Paperclip finds hermes via standard PATH regardless of how it spawns subprocesses
+cat > /usr/local/bin/hermes <<'WRAPPER'
+#!/bin/bash
+exec /opt/hermes/.venv/bin/python3 /opt/hermes/hermes "$@"
+WRAPPER
+chmod +x /usr/local/bin/hermes
+
+# Always apply our hermes CLI config (hermes-cli-data is exclusive to paperclip-hermes)
+echo "[entrypoint] applying hermes CLI config"
+mkdir -p "${HERMES_HOME}"
+cp /etc/hermes/config.yaml "${HERMES_HOME}/config.yaml"
+cp /etc/hermes/.env        "${HERMES_HOME}/.env"
+chown -R node:node "${HERMES_HOME}"
 
 # Non-interactive onboard on first boot — --bind lan sets authenticated/private mode with LAN binding
 # --yes alone forces local_trusted/loopback and ignores all env vars (upstream behaviour)

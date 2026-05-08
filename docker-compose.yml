@@ -33,7 +33,7 @@ services:
       - "3100:3100"
     volumes:
       - paperclip-data:/paperclip
-      - hermes-data:/data/hermes
+      - hermes-cli-data:/data/hermes
       - hermes-agent-src:/opt/hermes
     env_file: .env
     restart: unless-stopped
@@ -83,13 +83,14 @@ services:
       - "127.0.0.1:8787:8787"
     volumes:
       - hermes-data:/home/hermeswebui/.hermes
-      - hermes-agent-src:/home/hermeswebui/.hermes/hermes-agent
+      - hermes-agent-src:/opt/hermes-agent
       - ${HERMES_WORKSPACE:-/workspace}:/workspace
     environment:
       - HERMES_WEBUI_HOST=0.0.0.0
       - HERMES_WEBUI_PORT=8787
       - HERMES_WEBUI_STATE_DIR=/home/hermeswebui/.hermes/webui
       - HERMES_WEBUI_PASSWORD=${HERMES_WEBUI_PASSWORD}
+      - HERMES_WEBUI_AGENT_DIR=/opt/hermes-agent
       - WANTED_UID=${USER_UID:-1000}
       - WANTED_GID=${USER_GID:-1000}
     restart: unless-stopped
@@ -108,4 +109,5 @@ networks:
 volumes:
   paperclip-data:
   hermes-data:
+  hermes-cli-data:
   hermes-agent-src:
