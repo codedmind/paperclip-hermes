@@ -55,9 +55,16 @@ WRAPPER
 chmod +x /usr/local/bin/hermes
 
 # Always apply our hermes CLI config (hermes-cli-data is exclusive to paperclip-hermes)
-echo "[entrypoint] applying hermes CLI config"
+# Render config.yaml from template — envsubst substitutes ${HERMES_*} from .env before Hermes loads.
+# Hermes has no native env-var support for these fields under provider:custom, so substitution happens here.
+echo "[entrypoint] rendering hermes CLI config from template"
+: "${HERMES_MODEL:?HERMES_MODEL not set in .env}"
+: "${HERMES_PROVIDER:?HERMES_PROVIDER not set in .env}"
+: "${HERMES_BASE_URL:?HERMES_BASE_URL not set in .env}"
+: "${HERMES_CONTEXT_LENGTH:?HERMES_CONTEXT_LENGTH not set in .env}"
+: "${HERMES_TERMINAL_BACKEND:?HERMES_TERMINAL_BACKEND not set in .env}"
 mkdir -p "${HERMES_HOME}"
-cp /etc/hermes/config.yaml "${HERMES_HOME}/config.yaml"
+envsubst < /etc/hermes/config.yaml.template > "${HERMES_HOME}/config.yaml"
 cp /etc/hermes/.env        "${HERMES_HOME}/.env"
 chown -R node:node "${HERMES_HOME}"
 

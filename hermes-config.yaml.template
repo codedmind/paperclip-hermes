@@ -1,0 +1,11 @@
+# Template — generated into $HERMES_HOME/config.yaml at container startup by start.sh (envsubst).
+# Não editar este ficheiro em runtime — editar .env e fazer `docker compose down && up -d`.
+# Hermes não suporta env vars nativas para custom providers; a substituição é feita aqui antes do Hermes ler.
+model:
+  default: ${HERMES_MODEL}
+  provider: ${HERMES_PROVIDER}
+  base_url: ${HERMES_BASE_URL}
+  context_length: ${HERMES_CONTEXT_LENGTH}
+
+terminal:
+  backend: ${HERMES_TERMINAL_BACKEND}

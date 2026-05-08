@@ -9,8 +9,10 @@ ENV PAPERCLIP_DEPLOYMENT_MODE=authenticated
 ENV PAPERCLIP_DEPLOYMENT_EXPOSURE=private
 
 # System deps — cached unless base image changes
+# gettext-base provides envsubst (used by start.sh to render hermes config from template)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    gettext-base \
     git \
     gosu \
     python3 \
@@ -21,9 +23,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Paperclip (goes to /usr/local/bin, accessible by all users)
 RUN npm install -g paperclipai
 
-# Pre-seed minimal Hermes config so it never triggers the interactive setup wizard.
-# Copied to $HERMES_HOME at runtime by start.sh if not already present.
-COPY hermes-config.yaml /etc/hermes/config.yaml
+# Hermes config template — rendered by start.sh (envsubst) into $HERMES_HOME/config.yaml at runtime.
+# Values come from .env vars (HERMES_MODEL, HERMES_PROVIDER, HERMES_BASE_URL, HERMES_CONTEXT_LENGTH,
+# HERMES_TERMINAL_BACKEND). Hermes itself does not read these env vars; substitution happens before Hermes loads.
+COPY hermes-config.yaml.template /etc/hermes/config.yaml.template
 RUN touch /etc/hermes/.env
 
 RUN mkdir -p /paperclip /workspace \

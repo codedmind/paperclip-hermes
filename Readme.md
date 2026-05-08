@@ -64,9 +64,14 @@ docker build -t paperclip-hermes .
 | `API_SERVER_KEY` | unset | Gateway API key — required for gateway mode (min 8 chars) |
 | `ANTHROPIC_API_KEY` | unset | Needed to use Hermes (not required to start) |
 | `IP_ADDRESS` | unset | Optional hostname/IP to register with Paperclip |
-| `HERMES_MODEL` | unset | Optional Hermes model override |
-| `HERMES_INFERENCE_PROVIDER` | unset | Optional Hermes provider override |
+| `HERMES_MODEL` | required | Model identifier rendered into Hermes config (e.g. `qwen2.5-coder:32b`) |
+| `HERMES_PROVIDER` | required | Hermes provider name (e.g. `custom` for local Ollama) |
+| `HERMES_BASE_URL` | required | Inference endpoint URL (e.g. `http://host:11434/v1`) |
+| `HERMES_CONTEXT_LENGTH` | required | Model context window in tokens (e.g. `32768`) |
+| `HERMES_TERMINAL_BACKEND` | required | Terminal backend used by Hermes (e.g. `local`) |
 | `HERMES_WORKSPACE` | `~/workspace` | Local directory mounted into Hermes WebUI |
+
+The five `HERMES_*` model/provider vars are consumed by `envsubst` in `start.sh` to render `hermes-config.yaml.template` into `$HERMES_HOME/config.yaml` at boot. Hermes itself does not read these env vars natively under `provider: custom`; substitution happens before Hermes loads. Change a value in `.env` and `docker compose down && docker compose up -d` — no rebuild needed.
 
 ## Persistent data
 
@@ -80,9 +85,11 @@ Use Docker named volumes (default) or bind mounts to persist data across restart
 
 ## Hermes configuration
 
-On first boot, `start.sh` seeds a minimal Hermes config into `$HERMES_HOME/config.yaml` if one doesn't already exist. This prevents the interactive setup wizard from running when Paperclip calls the Hermes CLI.
+`hermes-config.yaml.template` defines the structure; the five `HERMES_*` model/provider vars from `.env` fill the values. On every boot, `start.sh` runs `envsubst` over the template and writes `$HERMES_HOME/config.yaml` — overwriting whatever was there. This both prevents the interactive setup wizard and keeps the running config in sync with `.env`.
 
-You can override it by mounting your own config:
+To change model, provider, base URL, context length, or terminal backend: edit `.env` and `docker compose down && docker compose up -d`. No rebuild required. If a required `HERMES_*` var is missing, `start.sh` aborts with a clear error.
+
+For ad-hoc debugging you can still override the rendered file by bind-mounting your own:
 
 ```bash
 docker run --rm -it \
