@@ -10,7 +10,7 @@ model:
   default: qwen2.5-coder:32b #model
   provider: custom
   base_url: http://remoteip:11434/v1 #Adjust remoteip 
-  context_length: 32768   # See warning below  
+  context_length: 32768   # See warning https://hermes-agent.nousresearch.com/docs/integrations/providers#ollama--local-models-zero-config
 
 terminal:
   backend: local
