@@ -85,31 +85,41 @@ if [ -n "${IP_ADDRESS:-}" ]; then
 fi
 
 # Inspect opencode's per-user SQLite DB and migrate only when needed.
-# DB at $HOME/.local/share/opencode/opencode.db. Logs explicit state for debugging:
-# Paperclip's adapter probe can leave an empty stub that fools naive existence checks.
+# DB at $HOME/.local/share/opencode/opencode.db. Output of priming goes to a persistent
+# log file (volume) because previous attempts showed that bash echoes and redirected
+# stdout/stderr can disappear from `docker compose logs` after paperclipai onboard ran.
 OPENCODE_DB="${PAPERCLIP_HOME}/.local/share/opencode/opencode.db"
-echo "[entrypoint] inspecting opencode DB at ${OPENCODE_DB}"
+OPENCODE_LOG="${PAPERCLIP_HOME}/.opencode_priming.log"
+{
+  printf '\n=== [%s] entrypoint priming pass ===\n' "$(date -Iseconds)"
+  printf 'OPENCODE_DB=%s\n' "${OPENCODE_DB}"
+  printf 'PAPERCLIP_HOME=%s HOME=%s USER=%s\n' "${PAPERCLIP_HOME}" "${HOME:-?}" "$(whoami)"
+} >> "${OPENCODE_LOG}" 2>&1 || true
+
+printf '[entrypoint] inspecting opencode DB at %s (priming log: %s)\n' "${OPENCODE_DB}" "${OPENCODE_LOG}"
+
+_run_priming() {
+  printf '[entrypoint]   running: gosu node env HOME=%s opencode models\n' "${PAPERCLIP_HOME}"
+  if gosu node env HOME="${PAPERCLIP_HOME}" opencode models >> "${OPENCODE_LOG}" 2>&1; then
+    printf '[entrypoint]   priming OK (output appended to %s)\n' "${OPENCODE_LOG}"
+  else
+    _ec=$?
+    printf '[entrypoint]   WARNING: priming failed (exit=%s, see %s)\n' "${_ec}" "${OPENCODE_LOG}"
+  fi
+}
 
 if [ ! -e "${OPENCODE_DB}" ]; then
-  echo "[entrypoint]   state: file missing — running migration"
-  if gosu node env HOME="${PAPERCLIP_HOME}" opencode models > /dev/null 2>&1; then
-    echo "[entrypoint]   priming OK"
-  else
-    echo "[entrypoint]   WARNING: priming failed (run \`docker compose exec paperclip-hermes gosu node env HOME=${PAPERCLIP_HOME} opencode models\` to debug)"
-  fi
+  printf '[entrypoint]   state: file missing\n'
+  _run_priming
 else
   _db_size=$(stat -c%s "${OPENCODE_DB}" 2>/dev/null || echo "?")
   _db_owner=$(stat -c "%U:%G" "${OPENCODE_DB}" 2>/dev/null || echo "?")
-  echo "[entrypoint]   state: file exists (size=${_db_size} bytes, owner=${_db_owner})"
+  printf '[entrypoint]   state: file exists (size=%s bytes, owner=%s)\n' "${_db_size}" "${_db_owner}"
   if [ ! -s "${OPENCODE_DB}" ]; then
-    echo "[entrypoint]   empty file — running migration"
-    if gosu node env HOME="${PAPERCLIP_HOME}" opencode models > /dev/null 2>&1; then
-      echo "[entrypoint]   priming OK"
-    else
-      echo "[entrypoint]   WARNING: priming failed"
-    fi
+    printf '[entrypoint]   empty file — running migration\n'
+    _run_priming
   else
-    echo "[entrypoint]   DB looks populated — skipping priming"
+    printf '[entrypoint]   DB looks populated — skipping priming\n'
   fi
 fi
 
