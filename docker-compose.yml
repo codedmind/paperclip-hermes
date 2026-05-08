@@ -33,7 +33,7 @@ services:
       - "3100:3100"
     volumes:
       - paperclip-data:/paperclip
-      - hermes-cli-data:/data/hermes
+      - hermes-data:/data/hermes
       - hermes-agent-src:/opt/hermes
     env_file: .env
     restart: unless-stopped
@@ -108,5 +108,4 @@ networks:
 volumes:
   paperclip-data:
   hermes-data:
-  hermes-cli-data:
   hermes-agent-src:
