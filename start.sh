@@ -68,28 +68,14 @@ envsubst < /etc/hermes/config.yaml.template > "${HERMES_HOME}/config.yaml"
 cp /etc/hermes/.env        "${HERMES_HOME}/.env"
 chown -R node:node "${HERMES_HOME}"
 
-# Non-interactive onboard on first boot — --bind lan sets authenticated/private mode with LAN binding
-# --yes alone forces local_trusted/loopback and ignores all env vars (upstream behaviour)
-if [ ! -d "${PAPERCLIP_HOME}/instances" ]; then
-  echo "[entrypoint] first boot — running paperclipai onboard --yes --bind lan"
-  gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" paperclipai onboard --yes --bind lan || echo "[entrypoint] WARNING: onboard exited non-zero"
-fi
-
-# Always allow localhost (required for Docker port-mapped access)
-gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" paperclipai allowed-hostname localhost || true
-
-# Register additional hostname if IP_ADDRESS is set
-if [ -n "${IP_ADDRESS:-}" ]; then
-  echo "[entrypoint] registering allowed-hostname ${IP_ADDRESS}"
-  gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" paperclipai allowed-hostname "${IP_ADDRESS}" || echo "[entrypoint] WARNING: allowed-hostname failed"
-fi
-
 # Inspect opencode's per-user SQLite DB and migrate only when needed.
-# DB at $HOME/.local/share/opencode/opencode.db. Output of priming goes to a persistent
-# log file (volume) because previous attempts showed that bash echoes and redirected
-# stdout/stderr can disappear from `docker compose logs` after paperclipai onboard ran.
+# DB at $HOME/.local/share/opencode/opencode.db. Run this BEFORE paperclipai onboard:
+# onboard's interactive output appears to corrupt later log capture, and any side effect
+# it may have on stdout buffering is avoided by ordering the priming first.
+# Output of priming goes to a persistent log file (volume) for inspection regardless.
 OPENCODE_DB="${PAPERCLIP_HOME}/.local/share/opencode/opencode.db"
 OPENCODE_LOG="${PAPERCLIP_HOME}/.opencode_priming.log"
+mkdir -p "${PAPERCLIP_HOME}"
 {
   printf '\n=== [%s] entrypoint priming pass ===\n' "$(date -Iseconds)"
   printf 'OPENCODE_DB=%s\n' "${OPENCODE_DB}"
@@ -121,6 +107,22 @@ else
   else
     printf '[entrypoint]   DB looks populated — skipping priming\n'
   fi
+fi
+
+# Non-interactive onboard on first boot — --bind lan sets authenticated/private mode with LAN binding
+# --yes alone forces local_trusted/loopback and ignores all env vars (upstream behaviour)
+if [ ! -d "${PAPERCLIP_HOME}/instances" ]; then
+  echo "[entrypoint] first boot — running paperclipai onboard --yes --bind lan"
+  gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" paperclipai onboard --yes --bind lan || echo "[entrypoint] WARNING: onboard exited non-zero"
+fi
+
+# Always allow localhost (required for Docker port-mapped access)
+gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" paperclipai allowed-hostname localhost || true
+
+# Register additional hostname if IP_ADDRESS is set
+if [ -n "${IP_ADDRESS:-}" ]; then
+  echo "[entrypoint] registering allowed-hostname ${IP_ADDRESS}"
+  gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" paperclipai allowed-hostname "${IP_ADDRESS}" || echo "[entrypoint] WARNING: allowed-hostname failed"
 fi
 
 echo "[entrypoint] starting paperclipai as node"
