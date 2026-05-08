@@ -1,9 +1,16 @@
 # Minimal Hermes config — prevents the interactive setup wizard.
 # Override at runtime with HERMES_MODEL / HERMES_INFERENCE_PROVIDER env vars,
 # or edit this file in the persistent volume at $HERMES_HOME/config.yaml.
+#model:
+#  provider: anthropic
+#  model: anthropic/claude-sonnet-4-20250514
+
+#### LOCAL OLLAMA
 model:
-  provider: anthropic
-  model: anthropic/claude-sonnet-4-20250514
+  default: qwen2.5-coder:32b #model
+  provider: custom
+  base_url: http://remoteip:11434/v1 #Adjust remoteip 
+  context_length: 32768   # See warning below  
 
 terminal:
   backend: local
