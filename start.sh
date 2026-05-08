@@ -84,14 +84,34 @@ if [ -n "${IP_ADDRESS:-}" ]; then
   gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" paperclipai allowed-hostname "${IP_ADDRESS}" || echo "[entrypoint] WARNING: allowed-hostname failed"
 fi
 
-# Prime opencode's per-user SQLite DB at $HOME/.local/share/opencode/opencode.db.
-# `opencode models` runs the schema migration on first invocation and is a fast no-op
-# afterwards. We always run it instead of guarding with a file-exists check because
-# Paperclip's adapter probe may leave an empty (un-migrated) opencode.db, which would
-# fool a `[ ! -f ]` test and skip the priming — leaving the adapter with zero models.
-echo "[entrypoint] priming opencode DB (idempotent)"
-gosu node env HOME="${PAPERCLIP_HOME}" opencode models > /dev/null 2>&1 || \
-  echo "[entrypoint] WARNING: opencode models priming failed"
+# Inspect opencode's per-user SQLite DB and migrate only when needed.
+# DB at $HOME/.local/share/opencode/opencode.db. Logs explicit state for debugging:
+# Paperclip's adapter probe can leave an empty stub that fools naive existence checks.
+OPENCODE_DB="${PAPERCLIP_HOME}/.local/share/opencode/opencode.db"
+echo "[entrypoint] inspecting opencode DB at ${OPENCODE_DB}"
+
+if [ ! -e "${OPENCODE_DB}" ]; then
+  echo "[entrypoint]   state: file missing — running migration"
+  if gosu node env HOME="${PAPERCLIP_HOME}" opencode models > /dev/null 2>&1; then
+    echo "[entrypoint]   priming OK"
+  else
+    echo "[entrypoint]   WARNING: priming failed (run \`docker compose exec paperclip-hermes gosu node env HOME=${PAPERCLIP_HOME} opencode models\` to debug)"
+  fi
+else
+  _db_size=$(stat -c%s "${OPENCODE_DB}" 2>/dev/null || echo "?")
+  _db_owner=$(stat -c "%U:%G" "${OPENCODE_DB}" 2>/dev/null || echo "?")
+  echo "[entrypoint]   state: file exists (size=${_db_size} bytes, owner=${_db_owner})"
+  if [ ! -s "${OPENCODE_DB}" ]; then
+    echo "[entrypoint]   empty file — running migration"
+    if gosu node env HOME="${PAPERCLIP_HOME}" opencode models > /dev/null 2>&1; then
+      echo "[entrypoint]   priming OK"
+    else
+      echo "[entrypoint]   WARNING: priming failed"
+    fi
+  else
+    echo "[entrypoint]   DB looks populated — skipping priming"
+  fi
+fi
 
 echo "[entrypoint] starting paperclipai as node"
 exec gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" HERMES_HOME="${HERMES_HOME}" HOST=0.0.0.0 PATH="${PATH}" paperclipai run --bind lan
