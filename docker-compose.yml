@@ -1,12 +1,52 @@
 services:
+  # One-shot: renders hermes-config.yaml.template (with values from .env) into the
+  # hermes-data volume BEFORE hermes-agent starts. The gateway, dashboard and webui
+  # all share hermes-data and read the same /home/hermes/.hermes/config.yaml from it.
+  # Hermes itself has no native env-var support for these fields under provider:custom.
+  hermes-config-init:
+    image: alpine:3
+    command: >
+      sh -c '
+      set -eu;
+      apk add --no-cache --quiet gettext;
+      : "$${HERMES_MODEL:?HERMES_MODEL not set in .env}";
+      : "$${HERMES_PROVIDER:?HERMES_PROVIDER not set in .env}";
+      : "$${HERMES_BASE_URL:?HERMES_BASE_URL not set in .env}";
+      : "$${HERMES_CONTEXT_LENGTH:?HERMES_CONTEXT_LENGTH not set in .env}";
+      : "$${HERMES_TERMINAL_BACKEND:?HERMES_TERMINAL_BACKEND not set in .env}";
+      mkdir -p /data;
+      envsubst < /tmp/template.yaml > /data/config.yaml;
+      chown $${USER_UID:-1000}:$${USER_GID:-1000} /data/config.yaml;
+      echo "[init] hermes config rendered into hermes-data volume";
+      cat /data/config.yaml
+      '
+    env_file: .env
+    environment:
+      - USER_UID=${USER_UID:-1000}
+      - USER_GID=${USER_GID:-1000}
+    volumes:
+      - hermes-data:/data
+      - ./hermes-config.yaml.template:/tmp/template.yaml:ro
+    restart: "no"
+    networks:
+      - hermes-net
+
   hermes-agent:
     image: nousresearch/hermes-agent:latest
     command: gateway run
+    depends_on:
+      hermes-config-init:
+        condition: service_completed_successfully
     ports:
       - "127.0.0.1:8642:8642"
     volumes:
       - hermes-agent-src:/opt/hermes
       - hermes-data:/home/hermes/.hermes
+    # env_file forwards the full .env to the gateway: provider API keys (Anthropic, OpenAI,
+    # OpenRouter, …), messaging tokens (Telegram/Slack/WhatsApp), search APIs (Firecrawl/Exa/…),
+    # audio (Whisper/Groq), browser tools — all consumed here. Justified by the breadth of
+    # legitimate vars (~15+). Explicit environment: entries below override env_file for matching keys.
+    env_file: .env
     environment:
       - HERMES_HOME=/home/hermes/.hermes
       - HERMES_UID=${USER_UID:-1000}
@@ -35,6 +75,10 @@ services:
       - paperclip-data:/paperclip
       - hermes-cli-data:/data/hermes
       - hermes-agent-src:/opt/hermes
+    # env_file forwards the full .env: Paperclip auth (BETTER_AUTH_*, PAPERCLIP_*),
+    # IP_ADDRESS, Hermes config template vars consumed by start.sh envsubst, plus all
+    # provider API keys / search APIs / audio / browser keys used by the local Hermes CLI.
+    # Justified by the breadth of legitimate vars (~20+).
     env_file: .env
     restart: unless-stopped
     healthcheck:
@@ -60,11 +104,18 @@ services:
       - "127.0.0.1:9119:9119"
     volumes:
       - hermes-data:/home/hermes/.hermes
+    # No env_file: the dashboard only talks to the gateway via GATEWAY_HEALTH_URL — it does
+    # not need provider keys, messaging tokens or Paperclip secrets. Adding any new var here
+    # should be a deliberate choice — list it explicitly below with ${VAR} substitution.
     environment:
       - HERMES_HOME=/home/hermes/.hermes
       - HERMES_UID=${USER_UID:-1000}
       - HERMES_GID=${USER_GID:-1000}
       - GATEWAY_HEALTH_URL=http://hermes-agent:8642
+      # Optional dashboard tunables — uncomment + set in .env if needed.
+      # - HERMES_DASHBOARD_HOST=${HERMES_DASHBOARD_HOST:-0.0.0.0}
+      # - HERMES_DASHBOARD_PORT=${HERMES_DASHBOARD_PORT:-9119}
+      # - HERMES_DASHBOARD_TUI=${HERMES_DASHBOARD_TUI:-true}
     restart: unless-stopped
     deploy:
       resources:
@@ -83,14 +134,21 @@ services:
       - "127.0.0.1:8787:8787"
     volumes:
       - hermes-data:/home/hermeswebui/.hermes
-      - hermes-agent-src:/opt/hermes-agent
+      # Nest agent-src inside hermes-data — exact path the webui's venv bootstrap expects.
+      # Mounting at /opt/hermes did not satisfy the check (script needs the source layout
+      # rooted at the home subdir per the warning's own "To fix" suggestion).
+      - hermes-agent-src:/home/hermeswebui/.hermes/hermes-agent
       - ${HERMES_WORKSPACE:-/workspace}:/workspace
+    # No env_file: the WebUI has its own auth (HERMES_WEBUI_PASSWORD) and reaches Hermes via
+    # the shared hermes-data volume + agent source mount. It does not need provider keys,
+    # messaging tokens or Paperclip secrets. Adding any new var here should be deliberate —
+    # list it explicitly below with ${VAR} substitution.
     environment:
       - HERMES_WEBUI_HOST=0.0.0.0
       - HERMES_WEBUI_PORT=8787
       - HERMES_WEBUI_STATE_DIR=/home/hermeswebui/.hermes/webui
       - HERMES_WEBUI_PASSWORD=${HERMES_WEBUI_PASSWORD}
-      - HERMES_WEBUI_AGENT_DIR=/opt/hermes-agent
+      - HERMES_WEBUI_AGENT_DIR=/home/hermeswebui/.hermes/hermes-agent
       - WANTED_UID=${USER_UID:-1000}
       - WANTED_GID=${USER_GID:-1000}
     restart: unless-stopped
