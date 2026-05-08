@@ -28,8 +28,10 @@ if [ "$_changed" = "1" ]; then
   chown -R node:node "${PAPERCLIP_HOME}"
 fi
 
-# Hermes binary is provided via the hermes-agent-src volume
-export PATH="/opt/hermes:${PATH}"
+# Hermes binary and its Python venv are provided via the hermes-agent-src volume
+# .venv/bin must come first so that the hermes script's 'env python3' resolves to the
+# venv interpreter that has all required packages (e.g. PyYAML)
+export PATH="/opt/hermes/.venv/bin:/opt/hermes:${PATH}"
 
 # Wait for the hermes-agent-src volume to be populated by the hermes-agent container
 echo "[entrypoint] waiting for hermes binary at /opt/hermes/hermes..."
@@ -71,4 +73,4 @@ if [ -n "${IP_ADDRESS:-}" ]; then
 fi
 
 echo "[entrypoint] starting paperclipai as node"
-exec gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" HERMES_HOME="${HERMES_HOME}" HOST=0.0.0.0 paperclipai run --bind lan
+exec gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" HERMES_HOME="${HERMES_HOME}" HOST=0.0.0.0 PATH="${PATH}" paperclipai run --bind lan
