@@ -20,8 +20,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && corepack enable
 
-# Install Paperclip (goes to /usr/local/bin, accessible by all users)
-RUN npm install -g paperclipai
+# Install Paperclip + OpenCode (goes to /usr/local/bin, accessible by all users).
+# OpenCode is the adapter Paperclip uses for the `opencode_local` agent type. Without it pre-installed,
+# Paperclip's auto-install path does NOT fire on headless runs and tasks fail with
+# "Command not found in PATH: opencode".
+RUN npm install -g paperclipai opencode-ai
 
 # Hermes config template — rendered by start.sh (envsubst) into $HERMES_HOME/config.yaml at runtime.
 # Values come from .env vars (HERMES_MODEL, HERMES_PROVIDER, HERMES_BASE_URL, HERMES_CONTEXT_LENGTH,
