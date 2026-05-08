@@ -33,8 +33,15 @@ export PATH="/opt/hermes:${PATH}"
 
 # Wait for the hermes-agent-src volume to be populated by the hermes-agent container
 echo "[entrypoint] waiting for hermes binary at /opt/hermes/hermes..."
+_elapsed=0
+_max_wait=120
 until [ -x "/opt/hermes/hermes" ]; do
+  if [ "$_elapsed" -ge "$_max_wait" ]; then
+    echo "[entrypoint] FATAL: hermes binary not ready after ${_max_wait}s — is hermes-agent running?"
+    exit 1
+  fi
   sleep 1
+  ((_elapsed++))
 done
 echo "[entrypoint] hermes binary ready"
 
@@ -44,6 +51,7 @@ if [ ! -f "${HERMES_HOME}/config.yaml" ]; then
   mkdir -p "${HERMES_HOME}"
   cp /etc/hermes/config.yaml "${HERMES_HOME}/config.yaml"
   cp /etc/hermes/.env        "${HERMES_HOME}/.env"
+  chown -R node:node "${HERMES_HOME}"
 fi
 
 # Non-interactive onboard on first boot
