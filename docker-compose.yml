@@ -76,6 +76,7 @@ services:
 
   hermes-webui:
     image: ghcr.io/nesquena/hermes-webui:latest
+    pid: "service:hermes-agent"
     depends_on:
       - hermes-agent
     ports:
