@@ -84,5 +84,15 @@ if [ -n "${IP_ADDRESS:-}" ]; then
   gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" paperclipai allowed-hostname "${IP_ADDRESS}" || echo "[entrypoint] WARNING: allowed-hostname failed"
 fi
 
+# Prime opencode's per-user SQLite DB at $HOME/.local/share/opencode/opencode.db.
+# The first invocation runs a one-time migration; without this, Paperclip's opencode_local
+# adapter shows zero models until someone manually runs `opencode models`. /paperclip is a
+# named volume so the DB persists across container restarts — this is a no-op after first boot.
+if [ ! -f "${PAPERCLIP_HOME}/.local/share/opencode/opencode.db" ]; then
+  echo "[entrypoint] priming opencode DB (one-time migration)"
+  gosu node env HOME="${PAPERCLIP_HOME}" opencode models > /dev/null 2>&1 || \
+    echo "[entrypoint] WARNING: opencode models priming failed (will run on first adapter use)"
+fi
+
 echo "[entrypoint] starting paperclipai as node"
 exec gosu node env HOME="${PAPERCLIP_HOME}" PAPERCLIP_HOME="${PAPERCLIP_HOME}" HERMES_HOME="${HERMES_HOME}" HOST=0.0.0.0 PATH="${PATH}" paperclipai run --bind lan
