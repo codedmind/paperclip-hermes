@@ -25,7 +25,7 @@ services:
       - USER_UID=${USER_UID:-1000}
       - USER_GID=${USER_GID:-1000}
     volumes:
-      - hermes-data:/data
+      - ./hermes-home:/data
       - ./hermes-config.yaml.template:/tmp/template.yaml:ro
     restart: "no"
     networks:
@@ -41,7 +41,7 @@ services:
       - "127.0.0.1:8642:8642"
     volumes:
       - hermes-agent-src:/opt/hermes
-      - hermes-data:/home/hermes/.hermes
+      - ./hermes-home:/home/hermes/.hermes
     # env_file forwards the full .env to the gateway: provider API keys (Anthropic, OpenAI,
     # OpenRouter, …), messaging tokens (Telegram/Slack/WhatsApp), search APIs (Firecrawl/Exa/…),
     # audio (Whisper/Groq), browser tools — all consumed here. Justified by the breadth of
@@ -72,8 +72,8 @@ services:
     ports:
       - "${PAPERCLIP_BIND_HOST:-127.0.0.1}:3100:3100"
     volumes:
-      - paperclip-data:/paperclip
-      - hermes-cli-data:/data/hermes
+      - ./paperclip-home:/paperclip
+      - ./hermes-cli-home:/data/hermes
       - hermes-agent-src:/opt/hermes
     # env_file forwards the full .env: Paperclip auth (BETTER_AUTH_*, PAPERCLIP_*),
     # IP_ADDRESS, Hermes config template vars consumed by start.sh envsubst, plus all
@@ -103,7 +103,7 @@ services:
     ports:
       - "${DASHBOARD_BIND_HOST:-127.0.0.1}:9119:9119"
     volumes:
-      - hermes-data:/home/hermes/.hermes
+      - ./hermes-home:/home/hermes/.hermes
     # No env_file: the dashboard only talks to the gateway via GATEWAY_HEALTH_URL — it does
     # not need provider keys, messaging tokens or Paperclip secrets. Adding any new var here
     # should be a deliberate choice — list it explicitly below with ${VAR} substitution.
@@ -125,6 +125,30 @@ services:
     networks:
       - hermes-net
 
+  piclaw:
+    image: ghcr.io/rcarmo/piclaw:latest
+    shm_size: '256m'
+    init: true
+    environment:
+      TERM: xterm-256color
+      PUID: "${PUID:-1000}"
+      PGID: "${PGID:-1000}"
+      PICLAW_WEB_PORT: "${PICLAW_WEB_PORT:-8080}"
+      PICLAW_AUTOSTART: "${PICLAW_AUTOSTART:-1}"
+    ports:
+      - "${PICLAW_WEB_BIND_HOST:-127.0.0.1}:${PICLAW_WEB_PORT:-8080}:8080"
+    volumes:
+      - ./piclaw-home:/config
+      - piclaw-workspace:/workspace
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "${PICLAW_CPU_LIMITS:-2}"
+          memory: "${PICLAW_MEMORY_LIMITS:-4G}"
+    networks:
+      - hermes-net
+
   hermes-webui:
     image: ghcr.io/nesquena/hermes-webui:latest
     pid: "service:hermes-agent"
@@ -133,7 +157,7 @@ services:
     ports:
       - "${WEBUI_BIND_HOST:-127.0.0.1}:8787:8787"
     volumes:
-      - hermes-data:/home/hermeswebui/.hermes
+      - ./hermes-home:/home/hermeswebui/.hermes
       - hermes-agent-src:/home/hermeswebui/.hermes/hermes-agent
       - ${HERMES_WORKSPACE:-/workspace}:/workspace
     # No env_file: the WebUI has its own auth (HERMES_WEBUI_PASSWORD) and reaches Hermes via
@@ -161,7 +185,10 @@ networks:
     driver: bridge
 
 volumes:
-  paperclip-data:
-  hermes-data:
-  hermes-cli-data:
   hermes-agent-src:
+  piclaw-workspace:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PICLAW_WORKSPACE_PATH:-./piclaw-workspace}

@@ -9,16 +9,23 @@ Paperclip integrates with Hermes via CLI. The Hermes binary is provided by the o
 ```
 hermes-agent  (nousresearch/hermes-agent:latest)
   ├── gateway run → :8642
-  ├── /opt/hermes       → hermes-agent-src volume (binary)
-  └── /home/hermes/.hermes → hermes-data volume (config/state)
+  ├── /opt/hermes          → hermes-agent-src (named volume — runtime binary)
+  └── /home/hermes/.hermes → ./hermes-home (bind mount — config/state)
 
 paperclip-hermes  (build local)
-  ├── /opt/hermes       ← hermes-agent-src volume (CLI access)
-  ├── /data/hermes      ← hermes-data volume (shared config)
-  └── /paperclip        ← paperclip-data volume
+  ├── /opt/hermes    ← hermes-agent-src (named volume — CLI access)
+  ├── /data/hermes   ← ./hermes-cli-home (bind mount)
+  └── /paperclip     ← ./paperclip-home (bind mount)
 
 hermes-dashboard  (nousresearch/hermes-agent:latest) → :9119
-hermes-webui      (ghcr.io/nesquena/hermes-webui)   → :8787
+  └── /home/hermes/.hermes → ./hermes-home (shared bind mount)
+
+hermes-webui  (ghcr.io/nesquena/hermes-webui) → :8787
+  └── /home/hermeswebui/.hermes → ./hermes-home (shared bind mount)
+
+piclaw  (ghcr.io/rcarmo/piclaw) → :8080  (standalone)
+  ├── /config    ← ./piclaw-home (bind mount)
+  └── /workspace ← ./piclaw-workspace (bind mount via driver_opts)
 ```
 
 ## Services
@@ -29,6 +36,7 @@ hermes-webui      (ghcr.io/nesquena/hermes-webui)   → :8787
 | Hermes Gateway | `8642` | `127.0.0.1` (fixed) | Internal API — consumed by dashboard and WebUI over Docker network only |
 | Hermes Dashboard | `9119` | `DASHBOARD_BIND_HOST` | Hermes agent dashboard |
 | Hermes WebUI | `8787` | `WEBUI_BIND_HOST` | Hermes chat interface |
+| PiClaw | `8080` | `PICLAW_WEB_BIND_HOST` | Pi Coding Agent workspace (standalone) |
 
 All bind addresses default to `127.0.0.1`. Set the relevant variable to `0.0.0.0` in `.env` to expose a service on the LAN. The gateway is always localhost-only — there is no use case for exposing it to the host network.
 
@@ -37,6 +45,7 @@ All bind addresses default to `127.0.0.1`. Set the relevant variable to `0.0.0.0
 ```bash
 cp .env.sample .env
 # Edit .env — set API_SERVER_KEY and ANTHROPIC_API_KEY
+mkdir -p paperclip-home hermes-home hermes-cli-home piclaw-home piclaw-workspace
 docker compose up -d --build
 ```
 
@@ -45,6 +54,7 @@ Then open:
 - Paperclip: http://localhost:3100
 - Hermes WebUI: http://localhost:8787
 - Hermes Dashboard: http://localhost:9119
+- PiClaw: http://localhost:8080
 
 ## Build only
 
@@ -75,18 +85,28 @@ docker build -t paperclip-hermes .
 | `PAPERCLIP_BIND_HOST` | `127.0.0.1` | Bind address for Paperclip (:3100) |
 | `DASHBOARD_BIND_HOST` | `127.0.0.1` | Bind address for Hermes Dashboard (:9119) |
 | `WEBUI_BIND_HOST` | `127.0.0.1` | Bind address for Hermes WebUI (:8787) |
+| `PICLAW_WEB_BIND_HOST` | `127.0.0.1` | Bind address for PiClaw |
+| `PICLAW_WEB_PORT` | `8080` | Port for PiClaw |
+| `PICLAW_AUTOSTART` | `1` | Auto-start Pi agent on boot |
+| `PUID` / `PGID` | `1000` | Host user UID/GID for PiClaw |
+| `PICLAW_WORKSPACE_PATH` | `./piclaw-workspace` | Host path for PiClaw workspace |
+| `PICLAW_CPU_LIMITS` | `2` | CPU limit for PiClaw container |
+| `PICLAW_MEMORY_LIMITS` | `4G` | Memory limit for PiClaw container |
 
 The five `HERMES_*` model/provider vars are consumed by `envsubst` in `start.sh` to render `hermes-config.yaml.template` into `$HERMES_HOME/config.yaml` at boot. Hermes itself does not read these env vars natively under `provider: custom`; substitution happens before Hermes loads. Change a value in `.env` and `docker compose down && docker compose up -d` — no rebuild needed.
 
 ## Persistent data
 
-| Volume | Description |
-|---|---|
-| `paperclip-data` | Paperclip state and instances |
-| `hermes-data` | Hermes config, sessions, and state (shared across all services) |
-| `hermes-agent-src` | Hermes binary — populated by hermes-agent, mounted read-only by Paperclip |
+All data volumes are bind-mounted to local directories created at first run. Inspect or back up data directly from the host — no `docker volume` commands needed.
 
-Use Docker named volumes (default) or bind mounts to persist data across restarts.
+| Host path | Container path | Services | Description |
+|---|---|---|---|
+| `./hermes-home` | `/home/hermes/.hermes` | hermes-agent, hermes-dashboard, hermes-webui | Hermes config, sessions, and state (shared) |
+| `./hermes-cli-home` | `/data/hermes` | paperclip-hermes | Hermes CLI data used by Paperclip |
+| `./paperclip-home` | `/paperclip` | paperclip-hermes | Paperclip state and instances |
+| `./piclaw-home` | `/config` | piclaw | PiClaw config and state |
+| `./piclaw-workspace` | `/workspace` | piclaw | PiClaw workspace (path overridable via `PICLAW_WORKSPACE_PATH`) |
+| `hermes-agent-src` *(named volume)* | `/opt/hermes` | hermes-agent, paperclip-hermes, hermes-webui | Hermes binary — populated by the agent container at startup |
 
 ## Hermes configuration
 
@@ -100,7 +120,7 @@ For ad-hoc debugging you can still override the rendered file by bind-mounting y
 docker run --rm -it \
   -p 3100:3100 \
   -v ./hermes-config.yaml:/data/hermes/config.yaml \
-  -v paperclip-data:/paperclip \
+  -v ./paperclip-home:/paperclip \
   paperclip-hermes
 ```
 
@@ -112,19 +132,19 @@ To run multiple independent Hermes instances, use separate containers with disti
 # Work profile
 docker run -d \
   --name hermes-work \
-  -v hermes-data-work:/data/hermes \
+  -v ./hermes-home-work:/data/hermes \
   -p 127.0.0.1:8643:8642 \
   paperclip-hermes
 
 # Personal profile
 docker run -d \
-  --name hermes-work \
-  -v hermes-data-work:/data/hermes \
-  -p 127.0.0.1:8643:8642 \
+  --name hermes-personal \
+  -v ./hermes-home-personal:/data/hermes \
+  -p 127.0.0.1:8644:8642 \
   paperclip-hermes
 ```
 
-Each profile gets its own data directory, sessions, memories, and config. Do not share the same `hermes-data` volume between two running containers — concurrent writes are not supported.
+Each profile gets its own data directory, sessions, memories, and config. Do not share the same `hermes-home` directory between two running containers — concurrent writes are not supported.
 
 ## Development
 
