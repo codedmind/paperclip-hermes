@@ -70,7 +70,7 @@ services:
     depends_on:
       - hermes-agent
     ports:
-      - "3100:3100"
+      - "${PAPERCLIP_BIND_HOST:-127.0.0.1}:3100:3100"
     volumes:
       - paperclip-data:/paperclip
       - hermes-cli-data:/data/hermes
@@ -101,7 +101,7 @@ services:
     depends_on:
       - hermes-agent
     ports:
-      - "127.0.0.1:9119:9119"
+      - "${DASHBOARD_BIND_HOST:-127.0.0.1}:9119:9119"
     volumes:
       - hermes-data:/home/hermes/.hermes
     # No env_file: the dashboard only talks to the gateway via GATEWAY_HEALTH_URL — it does
@@ -131,7 +131,7 @@ services:
     depends_on:
       - hermes-agent
     ports:
-      - "127.0.0.1:8787:8787"
+      - "${WEBUI_BIND_HOST:-127.0.0.1}:8787:8787"
     volumes:
       - hermes-data:/home/hermeswebui/.hermes
       - hermes-agent-src:/home/hermeswebui/.hermes/hermes-agent

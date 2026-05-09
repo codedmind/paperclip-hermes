@@ -23,12 +23,14 @@ hermes-webui      (ghcr.io/nesquena/hermes-webui)   → :8787
 
 ## Services
 
-| Service | Port | Description |
-|---|---|---|
-| Paperclip | `3100` | Main Paperclip UI |
-| Hermes Gateway | `8642` | API server for Dashboard and WebUI |
-| Hermes Dashboard | `9119` | Hermes agent dashboard |
-| Hermes WebUI | `8787` | Hermes chat interface |
+| Service | Port | Bind | Description |
+|---|---|---|---|
+| Paperclip | `3100` | `PAPERCLIP_BIND_HOST` | Main Paperclip UI |
+| Hermes Gateway | `8642` | `127.0.0.1` (fixed) | Internal API — consumed by dashboard and WebUI over Docker network only |
+| Hermes Dashboard | `9119` | `DASHBOARD_BIND_HOST` | Hermes agent dashboard |
+| Hermes WebUI | `8787` | `WEBUI_BIND_HOST` | Hermes chat interface |
+
+All bind addresses default to `127.0.0.1`. Set the relevant variable to `0.0.0.0` in `.env` to expose a service on the LAN. The gateway is always localhost-only — there is no use case for exposing it to the host network.
 
 ## Quick start
 
@@ -70,6 +72,9 @@ docker build -t paperclip-hermes .
 | `HERMES_CONTEXT_LENGTH` | required | Model context window in tokens (e.g. `32768`) |
 | `HERMES_TERMINAL_BACKEND` | required | Terminal backend used by Hermes (e.g. `local`) |
 | `HERMES_WORKSPACE` | `~/workspace` | Local directory mounted into Hermes WebUI |
+| `PAPERCLIP_BIND_HOST` | `127.0.0.1` | Bind address for Paperclip (:3100) |
+| `DASHBOARD_BIND_HOST` | `127.0.0.1` | Bind address for Hermes Dashboard (:9119) |
+| `WEBUI_BIND_HOST` | `127.0.0.1` | Bind address for Hermes WebUI (:8787) |
 
 The five `HERMES_*` model/provider vars are consumed by `envsubst` in `start.sh` to render `hermes-config.yaml.template` into `$HERMES_HOME/config.yaml` at boot. Hermes itself does not read these env vars natively under `provider: custom`; substitution happens before Hermes loads. Change a value in `.env` and `docker compose down && docker compose up -d` — no rebuild needed.
 
