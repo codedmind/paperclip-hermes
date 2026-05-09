@@ -151,6 +151,7 @@ services:
       - HERMES_WEBUI_STATE_DIR=/home/hermeswebui/.hermes/webui
       - HERMES_WEBUI_PASSWORD=${HERMES_WEBUI_PASSWORD}
       - HERMES_WEBUI_AGENT_DIR=/opt/hermes-agent
+      - HERMES_WEBUI_AUTO_INSTALL=1
       - WANTED_UID=${USER_UID:-1000}
       - WANTED_GID=${USER_GID:-1000}
     restart: unless-stopped
