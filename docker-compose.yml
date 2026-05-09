@@ -134,10 +134,7 @@ services:
       - "127.0.0.1:8787:8787"
     volumes:
       - hermes-data:/home/hermeswebui/.hermes
-      # Mount at /opt/hermes — one of the two paths the webui bootstrap script hardcodes.
-      # /home/hermeswebui/.hermes/hermes-agent (the other path) caused recursive chown
-      # failures because it nested a second volume inside hermes-data.
-      - hermes-agent-src:/opt/hermes
+      - hermes-agent-src:/home/hermeswebui/.hermes/hermes-agent
       - ${HERMES_WORKSPACE:-/workspace}:/workspace
     # No env_file: the WebUI has its own auth (HERMES_WEBUI_PASSWORD) and reaches Hermes via
     # the shared hermes-data volume + agent source mount. It does not need provider keys,
@@ -148,7 +145,6 @@ services:
       - HERMES_WEBUI_PORT=8787
       - HERMES_WEBUI_STATE_DIR=/home/hermeswebui/.hermes/webui
       - HERMES_WEBUI_PASSWORD=${HERMES_WEBUI_PASSWORD}
-      - HERMES_WEBUI_AUTO_INSTALL=1
       - WANTED_UID=${USER_UID:-1000}
       - WANTED_GID=${USER_GID:-1000}
     restart: unless-stopped
