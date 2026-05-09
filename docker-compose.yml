@@ -134,12 +134,10 @@ services:
       - "127.0.0.1:8787:8787"
     volumes:
       - hermes-data:/home/hermeswebui/.hermes
-      # Mount agent-src outside hermes-data — nesting it inside .hermes triggered the webui
-      # bootstrap script's recursive chown to fail on cross-volume files (gateway.lock, etc.)
-      # and aborted startup. The webui will emit a "hermes-agent source not found" WARNING
-      # at boot (reduced functionality: no model auto-detection, no personality routing) but
-      # otherwise runs fine. HERMES_WEBUI_AGENT_DIR points the runtime to the mounted source.
-      - hermes-agent-src:/opt/hermes-agent
+      # Mount at /opt/hermes — one of the two paths the webui bootstrap script hardcodes.
+      # /home/hermeswebui/.hermes/hermes-agent (the other path) caused recursive chown
+      # failures because it nested a second volume inside hermes-data.
+      - hermes-agent-src:/opt/hermes
       - ${HERMES_WORKSPACE:-/workspace}:/workspace
     # No env_file: the WebUI has its own auth (HERMES_WEBUI_PASSWORD) and reaches Hermes via
     # the shared hermes-data volume + agent source mount. It does not need provider keys,
@@ -150,7 +148,6 @@ services:
       - HERMES_WEBUI_PORT=8787
       - HERMES_WEBUI_STATE_DIR=/home/hermeswebui/.hermes/webui
       - HERMES_WEBUI_PASSWORD=${HERMES_WEBUI_PASSWORD}
-      - HERMES_WEBUI_AGENT_DIR=/opt/hermes-agent
       - HERMES_WEBUI_AUTO_INSTALL=1
       - WANTED_UID=${USER_UID:-1000}
       - WANTED_GID=${USER_GID:-1000}
