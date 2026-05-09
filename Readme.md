@@ -88,7 +88,6 @@ docker build -t paperclip-hermes .
 | `PICLAW_WEB_BIND_HOST` | `127.0.0.1` | Bind address for PiClaw |
 | `PICLAW_WEB_PORT` | `8080` | Port for PiClaw |
 | `PICLAW_AUTOSTART` | `1` | Auto-start Pi agent on boot |
-| `PUID` / `PGID` | `1000` | Host user UID/GID for PiClaw |
 | `PICLAW_WORKSPACE_PATH` | `./piclaw-workspace` | Host path for PiClaw workspace |
 | `PICLAW_CPU_LIMITS` | `2` | CPU limit for PiClaw container |
 | `PICLAW_MEMORY_LIMITS` | `4G` | Memory limit for PiClaw container |

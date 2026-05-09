@@ -131,8 +131,8 @@ services:
     init: true
     environment:
       TERM: xterm-256color
-      PUID: "${PUID:-1000}"
-      PGID: "${PGID:-1000}"
+      PUID: "${USER_UID:-1000}"
+      PGID: "${USER_GID:-1000}"
       PICLAW_WEB_PORT: "${PICLAW_WEB_PORT:-8080}"
       PICLAW_AUTOSTART: "${PICLAW_AUTOSTART:-1}"
     ports:
