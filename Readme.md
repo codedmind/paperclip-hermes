@@ -145,6 +145,54 @@ docker run -d \
 
 Each profile gets its own data directory, sessions, memories, and config. Do not share the same `hermes-home` directory between two running containers — concurrent writes are not supported.
 
+## PiClaw
+
+[PiClaw](https://github.com/rcarmo/piclaw) is a self-hosted Pi coding agent with a web UI. It runs as a standalone service — it shares the Docker network but has no dependency on Hermes or Paperclip.
+
+**Default port:** `8080` (configurable via `PICLAW_WEB_PORT`)
+
+**Workspace:** `piclaw-workspace` is a bind-mounted named volume. The host path defaults to `./piclaw-workspace` but can be overridden with `PICLAW_WORKSPACE_PATH` to point at any directory on the host — useful if you want PiClaw to operate on an existing project folder.
+
+```bash
+# Point PiClaw at an existing project
+PICLAW_WORKSPACE_PATH=/home/user/myproject docker compose up -d piclaw
+```
+
+Resource limits (`PICLAW_CPU_LIMITS`, `PICLAW_MEMORY_LIMITS`) default to 2 CPU / 4G. Adjust in `.env` for your host.
+
+---
+
+## Docker images
+
+Pre-built images are published to the GitHub Container Registry on every push to `main` and on every version tag:
+
+```bash
+# Latest from main
+docker pull ghcr.io/codedmind/paperclip-hermes:latest
+
+# Specific release
+docker pull ghcr.io/codedmind/paperclip-hermes:1.2.0
+```
+
+To use a pre-built image instead of building locally, replace the `build:` block in `docker-compose.yml`:
+
+```yaml
+paperclip-hermes:
+  image: ghcr.io/codedmind/paperclip-hermes:latest
+  # remove the build: block
+```
+
+### Releasing a new version
+
+```bash
+git tag v1.2.0
+git push origin v1.2.0
+```
+
+The workflow builds the image and publishes it with tags `1.2.0`, `1.2`, `1`, and `latest`.
+
+---
+
 ## Development
 
 Run a shell inside the image:
