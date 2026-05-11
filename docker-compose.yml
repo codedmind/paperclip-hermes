@@ -54,6 +54,7 @@ services:
       - API_SERVER_ENABLED=true
       - API_SERVER_HOST=0.0.0.0
       - API_SERVER_KEY=${API_SERVER_KEY}
+      - GATEWAY_ALLOW_ALL_USERS=true
     restart: unless-stopped
     deploy:
       resources:
