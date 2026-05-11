@@ -27,9 +27,13 @@ All ports bind to `127.0.0.1` by default (localhost only). See [Exposing service
 
 ### Option A — Use the pre-built image (no build required)
 
+No need to clone the full repo — download the three required files:
+
 ```bash
-git clone https://github.com/codedmind/paperclip-stack.git
-cd paperclip-stack
+mkdir paperclip-stack && cd paperclip-stack
+curl -sO https://raw.githubusercontent.com/codedmind/paperclip-stack/main/docker-compose.yml
+curl -sO https://raw.githubusercontent.com/codedmind/paperclip-stack/main/.env.sample
+curl -sO https://raw.githubusercontent.com/codedmind/paperclip-stack/main/hermes-config.yaml.template
 cp .env.sample .env
 ```
 
