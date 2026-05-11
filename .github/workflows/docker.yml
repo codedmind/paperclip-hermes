@@ -32,7 +32,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/codedmind/paperclipai-stack
+          images: ghcr.io/codedmind/paperclip-stack
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}

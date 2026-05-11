@@ -1,4 +1,4 @@
-# paperclipai-stack
+# paperclip-stack
 
 A self-hosted Docker Compose stack for [Paperclip AI](https://github.com/MinuteCode/paperclip) and its agent backends. Paperclip is the central hub — this repo bundles locally-deployable services (Hermes, PiClaw/pi.dev, and others as they land) into a single compose file so you can run them together with a single `docker compose up`.
 
@@ -12,7 +12,7 @@ hermes-agent  (nousresearch/hermes-agent:latest)
   ├── /opt/hermes          → hermes-agent-src (named volume — runtime binary)
   └── /home/hermes/.hermes → ./hermes-home (bind mount — config/state)
 
-paperclipai-stack  (build local)
+paperclip-stack  (build local)
   ├── /opt/hermes    ← hermes-agent-src (named volume — CLI access)
   ├── /data/hermes   ← ./hermes-cli-home (bind mount)
   └── /paperclip     ← ./paperclip-home (bind mount)
@@ -59,7 +59,7 @@ Then open:
 ## Build only
 
 ```bash
-docker build -t paperclipai-stack .
+docker build -t paperclip-stack .
 ```
 
 ## Environment variables
@@ -101,11 +101,11 @@ All data volumes are bind-mounted to local directories created at first run. Ins
 | Host path | Container path | Services | Description |
 |---|---|---|---|
 | `./hermes-home` | `/home/hermes/.hermes` | hermes-agent, hermes-dashboard, hermes-webui | Hermes config, sessions, and state (shared) |
-| `./hermes-cli-home` | `/data/hermes` | paperclipai-stack | Hermes CLI data used by Paperclip |
-| `./paperclip-home` | `/paperclip` | paperclipai-stack | Paperclip state and instances |
+| `./hermes-cli-home` | `/data/hermes` | paperclip-stack | Hermes CLI data used by Paperclip |
+| `./paperclip-home` | `/paperclip` | paperclip-stack | Paperclip state and instances |
 | `./piclaw-home` | `/config` | piclaw | PiClaw config and state |
 | `./piclaw-workspace` | `/workspace` | piclaw | PiClaw workspace (path overridable via `PICLAW_WORKSPACE_PATH`) |
-| `hermes-agent-src` *(named volume)* | `/opt/hermes` | hermes-agent, paperclipai-stack, hermes-webui | Hermes binary — populated by the agent container at startup |
+| `hermes-agent-src` *(named volume)* | `/opt/hermes` | hermes-agent, paperclip-stack, hermes-webui | Hermes binary — populated by the agent container at startup |
 
 ## Hermes configuration
 
@@ -120,7 +120,7 @@ docker run --rm -it \
   -p 3100:3100 \
   -v ./hermes-config.yaml:/data/hermes/config.yaml \
   -v ./paperclip-home:/paperclip \
-  paperclipai-stack
+  paperclip-stack
 ```
 
 ## Multi-profile
@@ -133,14 +133,14 @@ docker run -d \
   --name hermes-work \
   -v ./hermes-home-work:/data/hermes \
   -p 127.0.0.1:8643:8642 \
-  paperclipai-stack
+  paperclip-stack
 
 # Personal profile
 docker run -d \
   --name hermes-personal \
   -v ./hermes-home-personal:/data/hermes \
   -p 127.0.0.1:8644:8642 \
-  paperclipai-stack
+  paperclip-stack
 ```
 
 Each profile gets its own data directory, sessions, memories, and config. Do not share the same `hermes-home` directory between two running containers — concurrent writes are not supported.
@@ -168,17 +168,17 @@ Pre-built images are published to the GitHub Container Registry on every push to
 
 ```bash
 # Latest from main
-docker pull ghcr.io/codedmind/paperclipai-stack:latest
+docker pull ghcr.io/codedmind/paperclip-stack:latest
 
 # Specific release
-docker pull ghcr.io/codedmind/paperclipai-stack:1.2.0
+docker pull ghcr.io/codedmind/paperclip-stack:1.2.0
 ```
 
 To use a pre-built image instead of building locally, replace the `build:` block in `docker-compose.yml`:
 
 ```yaml
-paperclipai-stack:
-  image: ghcr.io/codedmind/paperclipai-stack:latest
+paperclip-stack:
+  image: ghcr.io/codedmind/paperclip-stack:latest
   # remove the build: block
 ```
 
@@ -198,8 +198,8 @@ The workflow builds the image and publishes it with tags `1.2.0`, `1.2`, `1`, an
 Run a shell inside the image:
 
 ```bash
-docker build -t paperclipai-stack:dev .
-docker run --rm -it --entrypoint bash paperclipai-stack:dev
+docker build -t paperclip-stack:dev .
+docker run --rm -it --entrypoint bash paperclip-stack:dev
 ```
 
 ## Security notes
