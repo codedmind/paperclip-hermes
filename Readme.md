@@ -43,8 +43,29 @@ All bind addresses default to `127.0.0.1`. Set the relevant variable to `0.0.0.0
 ## Quick start
 
 ```bash
+git clone https://github.com/codedmind/paperclip-stack.git
+cd paperclip-stack
 cp .env.sample .env
-# Edit .env — set API_SERVER_KEY and ANTHROPIC_API_KEY
+```
+
+Edit `.env` and fill in the required fields:
+
+| Variable | What to set |
+|---|---|
+| `BETTER_AUTH_SECRET` | `openssl rand -base64 32` |
+| `PAPERCLIP_PUBLIC_URL` | Public URL Paperclip is reachable at (e.g. `http://localhost:3100`) |
+| `BETTER_AUTH_URL` | Same value as `PAPERCLIP_PUBLIC_URL` |
+| `API_SERVER_KEY` | Any string ≥ 8 characters — secures the Hermes gateway API |
+| `ANTHROPIC_API_KEY` | Your Anthropic API key (needed to use Hermes) |
+| `HERMES_MODEL` | Model identifier (e.g. `qwen2.5-coder:32b`) |
+| `HERMES_PROVIDER` | Provider name (e.g. `custom` for local Ollama) |
+| `HERMES_BASE_URL` | Inference endpoint (e.g. `http://192.168.1.10:11434/v1`) |
+| `HERMES_CONTEXT_LENGTH` | Context window in tokens (e.g. `32768`) |
+| `HERMES_TERMINAL_BACKEND` | Terminal backend (e.g. `local`) |
+
+Then:
+
+```bash
 mkdir -p paperclip-home hermes-home hermes-cli-home piclaw-home piclaw-workspace
 docker compose up -d --build
 ```
