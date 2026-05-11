@@ -186,6 +186,8 @@ services:
       - hermes-agent
     ports:
       - "${HERMES_WORKSPACE_BIND_HOST:-127.0.0.1}:3000:3000"
+    volumes:
+      - hermes-agent-src:/opt/hermes
     # No env_file: only the vars the workspace needs — API connection and auth.
     environment:
       - HERMES_API_URL=http://hermes-agent:8642
