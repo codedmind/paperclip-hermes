@@ -66,7 +66,7 @@ services:
   paperclip-hermes:
     build:
       context: .
-    image: paperclip-hermes
+    image: paperclipai-stack
     depends_on:
       - hermes-agent
     ports:
