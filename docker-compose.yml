@@ -180,6 +180,26 @@ services:
     networks:
       - paperclip-stack
 
+  hermes-workspace:
+    image: ghcr.io/outsourc-e/hermes-workspace:latest
+    depends_on:
+      - hermes-agent
+    ports:
+      - "${HERMES_WORKSPACE_BIND_HOST:-127.0.0.1}:3000:3000"
+    # No env_file: only the vars the workspace needs — API connection and auth.
+    environment:
+      - HERMES_API_URL=http://hermes-agent:8642
+      - HERMES_API_TOKEN=${API_SERVER_KEY}
+      - HERMES_PASSWORD=${HERMES_PASSWORD}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+    networks:
+      - paperclip-stack
+
 networks:
   paperclip-stack:
     driver: bridge

@@ -11,6 +11,7 @@ A self-hosted Docker Compose stack for [Paperclip AI](https://github.com/MinuteC
 | Hermes Dashboard | `9119` | Hermes agent monitoring |
 | Hermes WebUI | `8787` | Hermes chat interface |
 | PiClaw | `8080` | Pi coding agent workspace |
+| Hermes Workspace | `3000` | Hermes web UI — chat, memory, skills, terminal |
 
 All ports bind to `127.0.0.1` by default (localhost only). See [Exposing services on the LAN](#exposing-services-on-the-lan) to change this.
 
@@ -51,6 +52,7 @@ Edit `.env` — fill in every field marked **required**:
 | `HERMES_BASE_URL` | Your inference endpoint (e.g. `http://192.168.1.10:11434/v1`) |
 | `HERMES_CONTEXT_LENGTH` | Model context window in tokens (e.g. `32768`) |
 | `HERMES_TERMINAL_BACKEND` | Terminal backend (use `local`) |
+| `HERMES_PASSWORD` | Password to access the Hermes Workspace UI (:3000) |
 
 Then start the stack:
 
@@ -87,6 +89,7 @@ This builds the `paperclip-stack` image from source before starting. Use this if
 Open in your browser:
 
 - Paperclip: http://localhost:3100
+- Hermes Workspace: http://localhost:3000
 - Hermes WebUI: http://localhost:8787
 - Hermes Dashboard: http://localhost:9119
 - PiClaw: http://localhost:8080
@@ -182,6 +185,16 @@ The Hermes config is generated from `hermes-config.yaml.template` on every boot 
 ```bash
 docker compose down && docker compose up -d
 ```
+
+---
+
+## Hermes Workspace
+
+[Hermes Workspace](https://github.com/outsourc-e/hermes-workspace) is a rich web UI for Hermes Agent — chat, file manager, memory browser, skill library, terminal access, and multi-agent swarm coordination. It connects to the existing `hermes-agent` gateway via API; no separate agent instance is needed.
+
+**Default port:** `3000` (configurable via `HERMES_WORKSPACE_BIND_HOST`)
+
+**Auth:** `HERMES_PASSWORD` is required — the workspace enforces password login.
 
 ---
 
