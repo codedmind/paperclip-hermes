@@ -57,7 +57,8 @@ Edit `.env` — fill in every field marked **required**:
 Then start the stack:
 
 ```bash
-mkdir -p paperclip-home hermes-home hermes-cli-home piclaw-home piclaw-workspace
+mkdir -p paperclip-home hermes-home hermes-cli-home piclaw-home piclaw-workspace hermes-workspace-home
+chown 10010:999 hermes-workspace-home
 docker compose up -d
 ```
 
@@ -76,7 +77,8 @@ cp .env.sample .env
 Edit `.env` with the same required fields as Option A (see table above), then:
 
 ```bash
-mkdir -p paperclip-home hermes-home hermes-cli-home piclaw-home piclaw-workspace
+mkdir -p paperclip-home hermes-home hermes-cli-home piclaw-home piclaw-workspace hermes-workspace-home
+chown 10010:999 hermes-workspace-home
 docker compose up -d --build
 ```
 
