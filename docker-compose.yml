@@ -29,7 +29,7 @@ services:
       - ./hermes-config.yaml.template:/tmp/template.yaml:ro
     restart: "no"
     networks:
-      - hermes-net
+      - paperclip-stack
 
   hermes-agent:
     image: nousresearch/hermes-agent:latest
@@ -61,7 +61,7 @@ services:
           memory: 2G
           cpus: "2.0"
     networks:
-      - hermes-net
+      - paperclip-stack
 
   paperclip-hermes:
     build:
@@ -93,7 +93,7 @@ services:
           memory: 4G
           cpus: "2.0"
     networks:
-      - hermes-net
+      - paperclip-stack
 
   hermes-dashboard:
     image: nousresearch/hermes-agent:latest
@@ -123,7 +123,7 @@ services:
           memory: 512M
           cpus: "0.5"
     networks:
-      - hermes-net
+      - paperclip-stack
 
   piclaw:
     image: ghcr.io/rcarmo/piclaw:latest
@@ -147,7 +147,7 @@ services:
           cpus: "${PICLAW_CPU_LIMITS:-2}"
           memory: "${PICLAW_MEMORY_LIMITS:-4G}"
     networks:
-      - hermes-net
+      - paperclip-stack
 
   hermes-webui:
     image: ghcr.io/nesquena/hermes-webui:latest
@@ -178,10 +178,10 @@ services:
           memory: 512M
           cpus: "0.5"
     networks:
-      - hermes-net
+      - paperclip-stack
 
 networks:
-  hermes-net:
+  paperclip-stack:
     driver: bridge
 
 volumes:
