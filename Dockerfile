@@ -12,6 +12,7 @@ ENV PAPERCLIP_DEPLOYMENT_EXPOSURE=private
 # gettext-base provides envsubst (used by start.sh to render hermes config from template)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    curl \
     gettext-base \
     git \
     gosu \
