@@ -65,9 +65,16 @@ Docker will pull `ghcr.io/codedmind/paperclip-stack:latest` automatically — no
 
 ### Option B — Build the image locally
 
-Same steps as above, but start with:
+```bash
+git clone https://github.com/codedmind/paperclip-stack.git
+cd paperclip-stack
+cp .env.sample .env
+```
+
+Edit `.env` with the same required fields as Option A (see table above), then:
 
 ```bash
+mkdir -p paperclip-home hermes-home hermes-cli-home piclaw-home piclaw-workspace
 docker compose up -d --build
 ```
 
