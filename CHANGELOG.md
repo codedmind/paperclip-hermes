@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1] — 2026-05-11
+
+### Fixed
+
+- `HERMES_CONTEXT_LENGTH` default raised to `65536` (64K) — Hermes Agent requires a minimum of 64K and refused to start with the previous default of 32K
+- Docker network renamed from `hermes-net` to `paperclip-stack` for consistency
+- Readme: Option B (build locally) was missing the `git clone` step
+
 ## [0.1.0] — 2026-05-11
 
 Initial release of **paperclip-stack** — a self-hosted Docker Compose stack for [Paperclip AI](https://github.com/MinuteCode/paperclip) and its agent backends.
