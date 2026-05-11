@@ -1,46 +1,31 @@
 # paperclip-stack
 
-A self-hosted Docker Compose stack for [Paperclip AI](https://github.com/MinuteCode/paperclip) and its agent backends. Paperclip is the central hub — this repo bundles locally-deployable services (Hermes, PiClaw/pi.dev, and others as they land) into a single compose file so you can run them together with a single `docker compose up`.
-
-The Hermes binary is provided by the official `nousresearch/hermes-agent` image through a shared Docker volume — no need to bake it into the Paperclip image. [Hermes Dashboard](https://github.com/NousResearch/hermes-agent) and [Hermes WebUI](https://github.com/nesquena/hermes-webui) run as companion services.
-
-## Architecture
-
-```
-hermes-agent  (nousresearch/hermes-agent:latest)
-  ├── gateway run → :8642
-  ├── /opt/hermes          → hermes-agent-src (named volume — runtime binary)
-  └── /home/hermes/.hermes → ./hermes-home (bind mount — config/state)
-
-paperclip-stack  (build local)
-  ├── /opt/hermes    ← hermes-agent-src (named volume — CLI access)
-  ├── /data/hermes   ← ./hermes-cli-home (bind mount)
-  └── /paperclip     ← ./paperclip-home (bind mount)
-
-hermes-dashboard  (nousresearch/hermes-agent:latest) → :9119
-  └── /home/hermes/.hermes → ./hermes-home (shared bind mount)
-
-hermes-webui  (ghcr.io/nesquena/hermes-webui) → :8787
-  └── /home/hermeswebui/.hermes → ./hermes-home (shared bind mount)
-
-piclaw  (ghcr.io/rcarmo/piclaw) → :8080  (standalone)
-  ├── /config    ← ./piclaw-home (bind mount)
-  └── /workspace ← ./piclaw-workspace (bind mount via driver_opts)
-```
+A self-hosted Docker Compose stack for [Paperclip AI](https://github.com/MinuteCode/paperclip) and its agent backends. Paperclip is the central hub — this repo bundles locally-deployable services (Hermes, PiClaw/pi.dev, and others as they land) into a single compose file so you can run the full stack with one command.
 
 ## Services
 
-| Service | Port | Bind | Description |
-|---|---|---|---|
-| Paperclip | `3100` | `PAPERCLIP_BIND_HOST` | Main Paperclip UI |
-| Hermes Gateway | `8642` | `127.0.0.1` (fixed) | Internal API — consumed by dashboard and WebUI over Docker network only |
-| Hermes Dashboard | `9119` | `DASHBOARD_BIND_HOST` | Hermes agent dashboard |
-| Hermes WebUI | `8787` | `WEBUI_BIND_HOST` | Hermes chat interface |
-| PiClaw | `8080` | `PICLAW_WEB_BIND_HOST` | Pi Coding Agent workspace (standalone) |
+| Service | Port | Description |
+|---|---|---|
+| Paperclip | `3100` | Main Paperclip UI |
+| Hermes Gateway | `8642` | Internal LLM gateway (localhost only) |
+| Hermes Dashboard | `9119` | Hermes agent monitoring |
+| Hermes WebUI | `8787` | Hermes chat interface |
+| PiClaw | `8080` | Pi coding agent workspace |
 
-All bind addresses default to `127.0.0.1`. Set the relevant variable to `0.0.0.0` in `.env` to expose a service on the LAN. The gateway is always localhost-only — there is no use case for exposing it to the host network.
+All ports bind to `127.0.0.1` by default (localhost only). See [Exposing services on the LAN](#exposing-services-on-the-lan) to change this.
+
+---
+
+## Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) with the Compose plugin (v2)
+- `openssl` (to generate a secret — available on Linux/macOS; on Windows use Git Bash or WSL)
+
+---
 
 ## Quick start
+
+### Option A — Use the pre-built image (no build required)
 
 ```bash
 git clone https://github.com/codedmind/paperclip-stack.git
@@ -48,159 +33,202 @@ cd paperclip-stack
 cp .env.sample .env
 ```
 
-Edit `.env` and fill in the required fields:
+Edit `.env` — fill in every field marked **required**:
 
-| Variable | What to set |
+| Variable | How to fill it in |
 |---|---|
-| `BETTER_AUTH_SECRET` | `openssl rand -base64 32` |
-| `PAPERCLIP_PUBLIC_URL` | Public URL Paperclip is reachable at (e.g. `http://localhost:3100`) |
+| `BETTER_AUTH_SECRET` | Run: `openssl rand -base64 32` and paste the output |
+| `PAPERCLIP_PUBLIC_URL` | URL you'll use to open Paperclip (e.g. `http://localhost:3100`) |
 | `BETTER_AUTH_URL` | Same value as `PAPERCLIP_PUBLIC_URL` |
-| `API_SERVER_KEY` | Any string ≥ 8 characters — secures the Hermes gateway API |
-| `ANTHROPIC_API_KEY` | Your Anthropic API key (needed to use Hermes) |
-| `HERMES_MODEL` | Model identifier (e.g. `qwen2.5-coder:32b`) |
-| `HERMES_PROVIDER` | Provider name (e.g. `custom` for local Ollama) |
-| `HERMES_BASE_URL` | Inference endpoint (e.g. `http://192.168.1.10:11434/v1`) |
-| `HERMES_CONTEXT_LENGTH` | Context window in tokens (e.g. `32768`) |
-| `HERMES_TERMINAL_BACKEND` | Terminal backend (e.g. `local`) |
+| `API_SERVER_KEY` | Any string ≥ 8 characters — secures the Hermes gateway |
+| `ANTHROPIC_API_KEY` | Your Anthropic API key (only needed to use Hermes) |
+| `HERMES_MODEL` | Model to use (e.g. `qwen2.5-coder:32b`) |
+| `HERMES_PROVIDER` | Provider type (e.g. `custom` for a local Ollama instance) |
+| `HERMES_BASE_URL` | Your inference endpoint (e.g. `http://192.168.1.10:11434/v1`) |
+| `HERMES_CONTEXT_LENGTH` | Model context window in tokens (e.g. `32768`) |
+| `HERMES_TERMINAL_BACKEND` | Terminal backend (use `local`) |
 
-Then:
+Then start the stack:
 
 ```bash
 mkdir -p paperclip-home hermes-home hermes-cli-home piclaw-home piclaw-workspace
+docker compose up -d
+```
+
+Docker will pull `ghcr.io/codedmind/paperclip-stack:latest` automatically — no build needed.
+
+---
+
+### Option B — Build the image locally
+
+Same steps as above, but start with:
+
+```bash
 docker compose up -d --build
 ```
 
-Then open:
+This builds the `paperclip-stack` image from source before starting. Use this if you've made changes to the `Dockerfile` or `start.sh`.
+
+---
+
+### After starting
+
+Open in your browser:
 
 - Paperclip: http://localhost:3100
 - Hermes WebUI: http://localhost:8787
 - Hermes Dashboard: http://localhost:9119
 - PiClaw: http://localhost:8080
 
-## Build only
+---
 
-```bash
-docker build -t paperclip-stack .
-```
+## Configuration reference
 
-## Environment variables
+All configuration lives in `.env`. The `.env.sample` file lists every available variable with comments.
+
+### Required variables
+
+| Variable | Description |
+|---|---|
+| `BETTER_AUTH_SECRET` | Secret used to sign Paperclip auth tokens |
+| `PAPERCLIP_PUBLIC_URL` | Canonical public URL for Paperclip |
+| `BETTER_AUTH_URL` | Must match `PAPERCLIP_PUBLIC_URL` |
+| `API_SERVER_KEY` | Hermes gateway API key (min 8 chars) |
+| `HERMES_MODEL` | Model identifier |
+| `HERMES_PROVIDER` | Provider name (`custom`, `openai`, etc.) |
+| `HERMES_BASE_URL` | Inference endpoint URL |
+| `HERMES_CONTEXT_LENGTH` | Context window in tokens |
+| `HERMES_TERMINAL_BACKEND` | Terminal backend (`local`) |
+
+### Optional variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `USER_UID` | `1000` | Host user UID — avoids volume permission issues |
-| `USER_GID` | `1000` | Host user GID |
-| `PAPERCLIP_HOME` | `/paperclip` | Paperclip data directory |
-| `HERMES_HOME` | `/data/hermes` | Hermes config/data directory |
-| `PAPERCLIP_INSTANCE_ID` | `default` | Paperclip instance name |
-| `PAPERCLIP_DEPLOYMENT_MODE` | `authenticated` | Paperclip deployment mode |
-| `PAPERCLIP_DEPLOYMENT_EXPOSURE` | `private` | Paperclip exposure setting |
-| `API_SERVER_KEY` | unset | Gateway API key — required for gateway mode (min 8 chars) |
-| `ANTHROPIC_API_KEY` | unset | Needed to use Hermes (not required to start) |
-| `IP_ADDRESS` | unset | Optional hostname/IP to register with Paperclip |
-| `HERMES_MODEL` | required | Model identifier rendered into Hermes config (e.g. `qwen2.5-coder:32b`) |
-| `HERMES_PROVIDER` | required | Hermes provider name (e.g. `custom` for local Ollama) |
-| `HERMES_BASE_URL` | required | Inference endpoint URL (e.g. `http://host:11434/v1`) |
-| `HERMES_CONTEXT_LENGTH` | required | Model context window in tokens (e.g. `32768`) |
-| `HERMES_TERMINAL_BACKEND` | required | Terminal backend used by Hermes (e.g. `local`) |
-| `HERMES_WORKSPACE` | `~/workspace` | Local directory mounted into Hermes WebUI |
-| `PAPERCLIP_BIND_HOST` | `127.0.0.1` | Bind address for Paperclip (:3100) |
-| `DASHBOARD_BIND_HOST` | `127.0.0.1` | Bind address for Hermes Dashboard (:9119) |
-| `WEBUI_BIND_HOST` | `127.0.0.1` | Bind address for Hermes WebUI (:8787) |
-| `PICLAW_WEB_BIND_HOST` | `127.0.0.1` | Bind address for PiClaw |
-| `PICLAW_WEB_PORT` | `8080` | Port for PiClaw |
-| `PICLAW_AUTOSTART` | `1` | Auto-start Pi agent on boot |
-| `PICLAW_WORKSPACE_PATH` | `./piclaw-workspace` | Host path for PiClaw workspace |
-| `PICLAW_CPU_LIMITS` | `2` | CPU limit for PiClaw container |
-| `PICLAW_MEMORY_LIMITS` | `4G` | Memory limit for PiClaw container |
+| `USER_UID` / `USER_GID` | `1000` / `1000` | Match to your host user to avoid volume permission issues. Run `id -u && id -g` to check. |
+| `ANTHROPIC_API_KEY` | — | Needed to use Hermes with Anthropic models |
+| `IP_ADDRESS` | — | LAN IP to register with Paperclip's allowed-hostname list |
+| `HERMES_WORKSPACE` | `/workspace` | Host directory mounted into Hermes WebUI |
+| `HERMES_WEBUI_PASSWORD` | — | Password for the Hermes WebUI (set if exposing on LAN) |
 
-The five `HERMES_*` model/provider vars are consumed by `envsubst` in `start.sh` to render `hermes-config.yaml.template` into `$HERMES_HOME/config.yaml` at boot. Hermes itself does not read these env vars natively under `provider: custom`; substitution happens before Hermes loads. Change a value in `.env` and `docker compose down && docker compose up -d` — no rebuild needed.
+For the full list see `.env.sample`.
+
+---
+
+## Exposing services on the LAN
+
+By default every port binds to `127.0.0.1`. To expose a service on your network, set its bind variable in `.env`:
+
+```
+PAPERCLIP_BIND_HOST=0.0.0.0    # Paperclip UI     :3100
+DASHBOARD_BIND_HOST=0.0.0.0    # Hermes dashboard :9119
+WEBUI_BIND_HOST=0.0.0.0        # Hermes WebUI     :8787
+PICLAW_WEB_BIND_HOST=0.0.0.0   # PiClaw           :8080
+```
+
+> The Hermes gateway (`:8642`) is always localhost-only and cannot be exposed.
+
+If you expose Paperclip on a LAN IP, also update `PAPERCLIP_PUBLIC_URL`, `BETTER_AUTH_URL`, and `IP_ADDRESS` to use that IP instead of `localhost`.
+
+---
 
 ## Persistent data
 
-All data volumes are bind-mounted to local directories created at first run. Inspect or back up data directly from the host — no `docker volume` commands needed.
+All state is stored in bind-mounted directories in the repo folder — no opaque Docker volumes.
 
-| Host path | Container path | Services | Description |
-|---|---|---|---|
-| `./hermes-home` | `/home/hermes/.hermes` | hermes-agent, hermes-dashboard, hermes-webui | Hermes config, sessions, and state (shared) |
-| `./hermes-cli-home` | `/data/hermes` | paperclip-stack | Hermes CLI data used by Paperclip |
-| `./paperclip-home` | `/paperclip` | paperclip-stack | Paperclip state and instances |
-| `./piclaw-home` | `/config` | piclaw | PiClaw config and state |
-| `./piclaw-workspace` | `/workspace` | piclaw | PiClaw workspace (path overridable via `PICLAW_WORKSPACE_PATH`) |
-| `hermes-agent-src` *(named volume)* | `/opt/hermes` | hermes-agent, paperclip-stack, hermes-webui | Hermes binary — populated by the agent container at startup |
+| Host path | Description |
+|---|---|
+| `./paperclip-home` | Paperclip state and instances |
+| `./hermes-home` | Hermes config, sessions, and state (shared by all Hermes services) |
+| `./hermes-cli-home` | Hermes CLI data used by Paperclip |
+| `./piclaw-home` | PiClaw config and state |
+| `./piclaw-workspace` | PiClaw workspace (override with `PICLAW_WORKSPACE_PATH`) |
+
+Back up any of these directories to preserve your data.
+
+---
+
+## Updating
+
+To update to the latest images:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+To rebuild the Paperclip image from source:
+
+```bash
+docker compose up -d --build
+```
+
+---
 
 ## Hermes configuration
 
-`hermes-config.yaml.template` defines the structure; the five `HERMES_*` model/provider vars from `.env` fill the values. On every boot, `start.sh` runs `envsubst` over the template and writes `$HERMES_HOME/config.yaml` — overwriting whatever was there. This both prevents the interactive setup wizard and keeps the running config in sync with `.env`.
-
-To change model, provider, base URL, context length, or terminal backend: edit `.env` and `docker compose down && docker compose up -d`. No rebuild required. If a required `HERMES_*` var is missing, `start.sh` aborts with a clear error.
-
-For ad-hoc debugging you can still override the rendered file by bind-mounting your own:
+The Hermes config is generated from `hermes-config.yaml.template` on every boot using the `HERMES_*` variables from `.env`. To change the model, provider, or endpoint: edit `.env` and restart — no rebuild needed.
 
 ```bash
-docker run --rm -it \
-  -p 3100:3100 \
-  -v ./hermes-config.yaml:/data/hermes/config.yaml \
-  -v ./paperclip-home:/paperclip \
-  paperclip-stack
+docker compose down && docker compose up -d
 ```
 
-## Multi-profile
-
-To run multiple independent Hermes instances, use separate containers with distinct volumes:
-
-```bash
-# Work profile
-docker run -d \
-  --name hermes-work \
-  -v ./hermes-home-work:/data/hermes \
-  -p 127.0.0.1:8643:8642 \
-  paperclip-stack
-
-# Personal profile
-docker run -d \
-  --name hermes-personal \
-  -v ./hermes-home-personal:/data/hermes \
-  -p 127.0.0.1:8644:8642 \
-  paperclip-stack
-```
-
-Each profile gets its own data directory, sessions, memories, and config. Do not share the same `hermes-home` directory between two running containers — concurrent writes are not supported.
+---
 
 ## PiClaw
 
-[PiClaw](https://github.com/rcarmo/piclaw) is a self-hosted Pi coding agent with a web UI. It runs as a standalone service — it shares the Docker network but has no dependency on Hermes or Paperclip.
+[PiClaw](https://github.com/rcarmo/piclaw) is a standalone Pi coding agent with a web UI. It shares the Docker network but has no dependency on Hermes or Paperclip.
 
-**Default port:** `8080` (configurable via `PICLAW_WEB_PORT`)
-
-**Workspace:** `piclaw-workspace` is a bind-mounted named volume. The host path defaults to `./piclaw-workspace` but can be overridden with `PICLAW_WORKSPACE_PATH` to point at any directory on the host — useful if you want PiClaw to operate on an existing project folder.
+To point it at an existing project folder:
 
 ```bash
-# Point PiClaw at an existing project
-PICLAW_WORKSPACE_PATH=/home/user/myproject docker compose up -d piclaw
+# In .env:
+PICLAW_WORKSPACE_PATH=/path/to/your/project
 ```
 
-Resource limits (`PICLAW_CPU_LIMITS`, `PICLAW_MEMORY_LIMITS`) default to 2 CPU / 4G. Adjust in `.env` for your host.
+Resource limits default to 2 CPU / 4 GB. Override in `.env` with `PICLAW_CPU_LIMITS` and `PICLAW_MEMORY_LIMITS`.
 
 ---
 
 ## Docker images
 
-Pre-built images are published to the GitHub Container Registry on every push to `main` and on every version tag:
+Pre-built images are published to the GitHub Container Registry on every push to `main` and on every version tag.
 
 ```bash
-# Latest from main
 docker pull ghcr.io/codedmind/paperclip-stack:latest
-
-# Specific release
-docker pull ghcr.io/codedmind/paperclip-stack:1.2.0
+docker pull ghcr.io/codedmind/paperclip-stack:0.1.0
 ```
 
-To use a pre-built image instead of building locally, replace the `build:` block in `docker-compose.yml`:
+---
 
-```yaml
-paperclip-stack:
-  image: ghcr.io/codedmind/paperclip-stack:latest
-  # remove the build: block
+## Architecture
+
+```
+hermes-config-init  (alpine — one-shot)
+  └── renders hermes-config.yaml.template → ./hermes-home/config.yaml
+
+hermes-agent  (nousresearch/hermes-agent:latest)
+  ├── gateway run → :8642 (internal)
+  ├── /opt/hermes          → hermes-agent-src (named volume — runtime binary)
+  └── /home/hermes/.hermes → ./hermes-home
+
+paperclip-stack  (ghcr.io/codedmind/paperclip-stack or local build)
+  ├── /opt/hermes    ← hermes-agent-src
+  ├── /data/hermes   ← ./hermes-cli-home
+  └── /paperclip     ← ./paperclip-home
+
+hermes-dashboard  (nousresearch/hermes-agent:latest) → :9119
+hermes-webui  (ghcr.io/nesquena/hermes-webui) → :8787
+piclaw  (ghcr.io/rcarmo/piclaw) → :8080
+```
+
+---
+
+## Development
+
+```bash
+# Build and open a shell
+docker build -t paperclip-stack:dev .
+docker run --rm -it --entrypoint bash paperclip-stack:dev
 ```
 
 ### Releasing a new version
@@ -210,24 +238,12 @@ git tag v1.2.0
 git push origin v1.2.0
 ```
 
-The workflow builds the image and publishes it with tags `1.2.0`, `1.2`, `1`, and `latest`.
+The CI workflow builds and publishes `ghcr.io/codedmind/paperclip-stack` with tags `1.2.0`, `1.2`, `1`, and `latest`.
 
 ---
 
-## Development
-
-Run a shell inside the image:
-
-```bash
-docker build -t paperclip-stack:dev .
-docker run --rm -it --entrypoint bash paperclip-stack:dev
-```
-
 ## Security notes
 
-Recommended hardening:
-
-- Pin the base image by digest
-- Pin the `paperclipai` npm version
-- Pin `nousresearch/hermes-agent` to a specific tag or digest
-- Add CI checks for Docker builds and shell scripts
+- Set a strong `API_SERVER_KEY` and `HERMES_WEBUI_PASSWORD` before exposing any port on the network
+- `BETTER_AUTH_SECRET` must be kept secret — regenerate if compromised
+- Consider pinning image digests in production (`image: ghcr.io/codedmind/paperclip-stack@sha256:...`)
