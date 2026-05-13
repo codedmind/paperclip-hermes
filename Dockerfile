@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # OpenCode is the adapter Paperclip uses for the `opencode_local` agent type. Without it pre-installed,
 # Paperclip's auto-install path does NOT fire on headless runs and tasks fail with
 # "Command not found in PATH: opencode".
-RUN npm install -g paperclipai opencode-ai
+RUN npm install -g paperclipai opencode-ai @openai/codex
 
 # Hermes config template — rendered by start.sh (envsubst) into $HERMES_HOME/config.yaml at runtime.
 # Values come from .env vars (HERMES_MODEL, HERMES_PROVIDER, HERMES_BASE_URL, HERMES_CONTEXT_LENGTH,
