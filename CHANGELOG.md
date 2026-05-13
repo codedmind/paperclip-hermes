@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2] — 2026-05-13
+
+### Fixed
+
+- Add `@openai/codex` to global npm installs — Paperclip was failing to find the `codex` CLI at runtime
+- Add `@anthropic-ai/claude-code` to global npm installs — pre-installs Claude CLI so Paperclip can find it without auto-install fallback
+
 ## [0.1.1] — 2026-05-11
 
 ### Fixed
