@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gettext-base \
     git \
     gosu \
+    openssh-client \
     python3 \
     ripgrep \
     && rm -rf /var/lib/apt/lists/* \
